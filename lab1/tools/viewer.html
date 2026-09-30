@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MQTT viewer</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1b; --muted:#6b6b66; --line:#e3e2dd; --accent:#2f6fdb;
+          --up:#1f7a4d; --down:#8a4fd0; --warn:#b3261e; --chip:#efeee9; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1a1a18; --fg:#ecebe6; --muted:#a3a29c; --line:#34332f; --accent:#7aa7f5;
+            --up:#5cc795; --down:#c39af0; --warn:#f08a82; --chip:#2a2926; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:13px/1.45 system-ui, sans-serif; }
+  header { padding:12px 16px; border-bottom:1px solid var(--line); display:flex; gap:16px;
+           align-items:baseline; flex-wrap:wrap; }
+  h1 { font-size:16px; margin:0; }
+  h2 { font-size:14px; margin:18px 16px 6px; }
+  .muted { color:var(--muted); }
+  .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-left:auto; }
+  input[type=text] { padding:4px 8px; border:1px solid var(--line); border-radius:6px;
+                     background:transparent; color:var(--fg); width:220px; }
+  button { padding:4px 10px; border:1px solid var(--line); border-radius:6px; background:var(--chip);
+           color:var(--fg); cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  .wrap { overflow-x:auto; padding:0 16px; }
+  table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; }
+  th, td { text-align:left; padding:3px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { font-weight:600; color:var(--muted); position:sticky; top:0; background:var(--bg); }
+  td.payload { white-space:normal; word-break:break-all; max-width:520px; font-family:ui-monospace, monospace; font-size:12px; cursor:pointer; }
+  td.payload.full { max-width:none; }
+  td.num { text-align:right; }
+  .up { color:var(--up); } .down { color:var(--down); } .warn { color:var(--warn); }
+  .chip { display:inline-block; padding:0 6px; border-radius:10px; background:var(--chip); font-size:11px; }
+  #log { max-height:60vh; overflow:auto; }
+  .tabs { display:flex; gap:6px; padding:10px 16px 0; }
+  .tabs button.on { border-color:var(--accent); color:var(--accent); }
+  section { display:none; } section.on { display:block; }
+</style>
+</head>
+<body>
+<header>
+  <h1>MQTT viewer</h1>
+  <span class="muted" id="totals">…</span>
+  <div class="controls">
+    <label><input type="checkbox" id="hidePing" checked> hide PINGREQ/PINGRESP</label>
+    <input type="text" id="filter" placeholder="filter: client, topic, type…">
+    <button id="pause">Pause</button>
+    <button id="clear">Clear</button>
+  </div>
+</header>
+<div class="tabs">
+  <button data-tab="packets" class="on">Packets</button>
+  <button data-tab="topics">Topics (last 5 min)</button>
+  <button data-tab="clients">Clients</button>
+</div>
+
+<section id="packets" class="on">
+  <h2>Every packet through the relay <span class="muted">— <span class="up">↑ client to broker</span>, <span class="down">↓ broker to client</span></span></h2>
+  <div class="wrap" id="log">
+    <table><thead><tr>
+      <th>time</th><th></th><th>client</th><th>type</th><th>QoS</th><th>flags</th><th>id</th>
+      <th>topic / detail</th><th>payload</th><th class="num">payload B</th><th class="num">packet B</th>
+    </tr></thead><tbody id="rows"></tbody></table>
+  </div>
+</section>
+
+<section id="topics">
+  <h2>What clients publish, per topic <span class="muted">— sizes in bytes</span></h2>
+  <div class="wrap"><table><thead><tr>
+    <th>topic</th><th class="num">messages</th><th class="num">every (s)</th><th class="num">avg payload</th>
+    <th class="num">avg packet</th><th>QoS</th><th class="num">retained</th><th>published by</th>
+  </tr></thead><tbody id="topicRows"></tbody></table></div>
+</section>
+
+<section id="clients">
+  <h2>Connections <span class="muted">— newest first. “Freeze” silences the link without closing it.</span></h2>
+  <div class="wrap"><table><thead><tr>
+    <th>#</th><th>client id</th><th>opened</th><th>keepalive</th><th>clean</th><th>last will</th>
+    <th class="num">bytes ↑</th><th class="num">bytes ↓</th><th>ended</th><th></th>
+  </tr></thead><tbody id="clientRows"></tbody></table></div>
+</section>
+
+<script>
+let since = 0, paused = false;
+const rows = document.getElementById('rows');
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const hhmmss = t => new Date(t * 1000).toLocaleTimeString([], {hour12:false}) + '.' + String(Math.floor((t % 1) * 1000)).padStart(3, '0');
+
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === b.dataset.tab));
+});
+document.getElementById('pause').onclick = e => { paused = !paused; e.target.textContent = paused ? 'Resume' : 'Pause'; };
+document.getElementById('clear').onclick = () => { rows.innerHTML = ''; };
+const filterBox = document.getElementById('filter'), hidePing = document.getElementById('hidePing');
+
+function visible(p) {
+  if (hidePing.checked && (p.type === 'PINGREQ' || p.type === 'PINGRESP')) return false;
+  const f = filterBox.value.trim().toLowerCase();
+  if (!f) return true;
+  return [p.client, p.topic, p.type, p.payload, p.detail].some(v => String(v ?? '').toLowerCase().includes(f));
+}
+function applyFilter() { for (const tr of rows.children) tr.style.display = visible(tr._p) ? '' : 'none'; }
+filterBox.oninput = applyFilter; hidePing.onchange = applyFilter;
+
+const short = s => { s = s || ''; return s.length > 160 ? s.slice(0, 160) + '…' : s; };
+rows.addEventListener('click', e => {
+  const td = e.target.closest('td.payload'); if (!td) return;
+  const p = td.parentElement._p; const full = !td.classList.contains('full');
+  td.classList.toggle('full', full); td.textContent = full ? (p.payload || '') : short(p.payload);
+});
+function row(p) {
+  const tr = document.createElement('tr');
+  tr._p = p;
+  const flags = [p.retain ? 'retain' : '', p.dup ? 'dup' : '', p.dropped ? 'DROPPED' : ''].filter(Boolean).join(' ');
+  tr.innerHTML = `<td>${hhmmss(p.t)}</td><td class="${p.dir}">${p.dir === 'up' ? '↑' : '↓'}</td>
+    <td>${esc(p.client || '—')}</td><td><span class="chip">${esc(p.type)}</span></td>
+    <td>${p.qos ?? ''}</td><td class="${p.dropped ? 'warn' : ''}">${flags}</td><td>${p.packet_id ?? ''}</td>
+    <td>${esc(p.topic || p.detail || '')}</td><td class="payload" title="click to show it all">${esc(short(p.payload))}</td>
+    <td class="num">${p.payload_size ?? ''}</td><td class="num">${p.size}</td>`;
+  tr.style.display = visible(p) ? '' : 'none';
+  return tr;
+}
+
+async function tick() {
+  try {
+    if (!paused) {
+      const items = await (await fetch('/api/packets?since=' + since)).json();
+      const box = document.getElementById('log');
+      const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 20;
+      for (const p of items) { rows.appendChild(row(p)); since = p.seq; }
+      while (rows.children.length > 3000) rows.removeChild(rows.firstChild);
+      if (atBottom) box.scrollTop = box.scrollHeight;
+    }
+    const t = await (await fetch('/api/totals?window=60')).json();
+    document.getElementById('totals').textContent =
+      `last minute: ${t.packets} packets, ${t.bytes_up} B ↑, ${t.bytes_down} B ↓`;
+  } catch (e) { document.getElementById('totals').textContent = 'relay unreachable'; }
+}
+
+async function slow() {
+  try {
+    const topics = await (await fetch('/api/topics?window=300')).json();
+    document.getElementById('topicRows').innerHTML = topics.map(s => `<tr><td>${esc(s.topic)}</td>
+      <td class="num">${s.messages}</td><td class="num">${s.period_s ?? ''}</td>
+      <td class="num">${s.avg_payload}</td><td class="num">${s.avg_packet}</td><td>${s.qos.join(', ')}</td>
+      <td class="num">${s.retained}</td><td>${esc(s.publishers.join(', '))}</td></tr>`).join('');
+    const conns = (await (await fetch('/api/connections')).json()).reverse();
+    document.getElementById('clientRows').innerHTML = conns.map(c => `<tr>
+      <td>${c.id}</td><td>${esc(c.client_id || '—')}</td><td>${hhmmss(c.opened)}</td>
+      <td>${c.keepalive ?? ''}${c.keepalive != null ? ' s' : ''}</td><td>${c.clean == null ? '' : c.clean ? 'yes' : 'no'}</td>
+      <td>${c.will ? esc(`${c.will.topic} ← "${c.will.payload}" QoS ${c.will.qos}${c.will.retain ? ' retained' : ''}`) : ''}</td>
+      <td class="num">${c.bytes_up}</td><td class="num">${c.bytes_down}</td>
+      <td class="${c.end && !c.end.startsWith('clean') ? 'warn' : ''}">${c.closed ? hhmmss(c.closed) + ' — ' + esc(c.end) : (c.frozen_at ? 'frozen since ' + hhmmss(c.frozen_at) : 'open')}</td>
+      <td>${!c.closed && !c.frozen_at ? `<button onclick="freeze(${c.id})">Freeze</button>` : ''}</td></tr>`).join('');
+  } catch (e) {}
+}
+async function freeze(id) { await fetch('/api/freeze?id=' + id, {method: 'POST'}); slow(); }
+
+tick(); slow();
+setInterval(tick, 1000); setInterval(slow, 3000);
+</script>
+</body>
+</html>

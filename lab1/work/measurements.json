@@ -1,0 +1,7 @@
+{
+  "thermaline_payload_bytes": null,
+  "thermaline_packet_bytes": null,
+  "chirpstack_payload_bytes": null,
+  "meter_data_bytes": null,
+  "building_bytes_per_minute": null
+}

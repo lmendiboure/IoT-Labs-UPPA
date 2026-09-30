@@ -1,0 +1,29 @@
+{
+  "site": "Adour",
+  "devices": [
+    {"id": "TL-0001", "vendor": "Thermaline", "kind": "room environment (temperature, humidity, CO2)", "building": "A", "floor": 1, "place": "room A101"},
+    {"id": "TL-0002", "vendor": "Thermaline", "kind": "room environment (temperature, humidity, CO2)", "building": "A", "floor": 1, "place": "room A102"},
+    {"id": "TL-0003", "vendor": "Thermaline", "kind": "room environment (temperature, humidity, CO2)", "building": "A", "floor": 2, "place": "room A201"},
+    {"id": "KL-7F3A", "vendor": "Klimo", "kind": "room environment (temperature, humidity, CO2)", "building": "B", "floor": 2, "place": "room B204"},
+    {"id": "KL-1EEC", "vendor": "Klimo", "kind": "room environment (temperature, humidity, CO2)", "building": "B", "floor": 1, "place": "room B101"},
+    {"id": "WC-2041", "vendor": "Klimo", "kind": "window contact", "building": "B", "floor": 2, "place": "room B204"},
+    {"id": "70B3D57ED0012A4F", "vendor": "Aquanet", "kind": "water meter (LoRaWAN)", "building": "A", "floor": 0, "place": "riser A-R1"},
+    {"id": "70B3D57ED00F1C4C", "vendor": "Aquanet", "kind": "water meter (LoRaWAN)", "building": "B", "floor": 0, "place": "riser B-R1"},
+    {"id": "DOOR-3", "vendor": "Securi", "kind": "door contact", "building": "A", "floor": 0, "place": "entrance hall"},
+    {"id": "GW-A", "vendor": "Kerlink", "kind": "LoRaWAN gateway", "building": "A", "floor": 3, "place": "roof"},
+    {"id": "PLC-1", "vendor": "Schneider", "kind": "boiler controller (Modbus)", "building": "A", "floor": 0, "place": "boiler room"},
+    {"id": "AQ-OUT", "vendor": "Sensirion", "kind": "outdoor air quality station", "building": null, "floor": null, "place": "car park, outdoors"}
+  ],
+  "needs": [
+    {"id": "N1", "text": "everything in building A",
+     "devices": ["TL-0001", "TL-0002", "TL-0003", "70B3D57ED0012A4F", "DOOR-3", "GW-A", "PLC-1"]},
+    {"id": "N2", "text": "everything on floor 2, both buildings",
+     "devices": ["TL-0003", "KL-7F3A", "WC-2041"]},
+    {"id": "N3", "text": "every room environment sensor, whatever its vendor",
+     "devices": ["TL-0001", "TL-0002", "TL-0003", "KL-7F3A", "KL-1EEC"]},
+    {"id": "N4", "text": "every water meter",
+     "devices": ["70B3D57ED0012A4F", "70B3D57ED00F1C4C"]},
+    {"id": "N5", "text": "everything in room B204",
+     "devices": ["KL-7F3A", "WC-2041"]}
+  ]
+}

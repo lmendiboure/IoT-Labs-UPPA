@@ -1,0 +1,39 @@
+# Lab 1 — IoT architecture and first MQTT messages.
+#   start:  docker compose up -d --build        (the first time takes a few minutes)
+#   work:   docker compose exec workstation bash
+#   stop:   docker compose down
+name: lab1
+
+services:
+  broker:                       # the MQTT broker: Eclipse Mosquitto, as used in industry
+    image: eclipse-mosquitto:2.0
+    volumes:
+      - ./broker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  relay:                        # sits between every client and the broker; shows every packet
+    build: ./tools
+    image: lab-tools:1
+    command: python relay.py
+    ports:
+      - "127.0.0.1:8080:8080"   # the viewer, reached through SSH: ssh -L 8080:localhost:8080 ...
+    depends_on: [broker]
+    restart: unless-stopped
+
+  building:                     # the Adour building: a few devices, each in its vendor's way
+    build: ./tools
+    image: lab-tools:1
+    command: python building.py
+    depends_on: [relay]
+    restart: unless-stopped
+
+  workstation:                  # where you work: your files are in ./work, seen as /work
+    build: ./tools
+    image: lab-tools:1
+    hostname: workstation
+    command: sleep infinity
+    working_dir: /work
+    volumes:
+      - ./work:/work
+    depends_on: [relay]
+    restart: unless-stopped

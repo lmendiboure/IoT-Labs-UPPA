@@ -1,0 +1,8 @@
+# what the tools write while you work
+**/work/.checks.json
+**/work/.hints.json
+**/work/report-*.md
+__pycache__/
+*.pyc
+.DS_Store
+.vscode/
