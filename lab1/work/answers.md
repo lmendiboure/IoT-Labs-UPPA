@@ -3,7 +3,7 @@
 Team: (your names)
 
 Write each answer below its question. Short and precise beats long: a table, a figure with its unit,
-the source of what you looked up.
+the source of what you looked up. Note the day and time of your observations: the plant has a rhythm.
 
 ## Q1 — The layers of an IoT system
 
@@ -11,21 +11,21 @@ the source of what you looked up.
 
 ## Q3 — Why not HTTP everywhere?
 
-## Q4 — Every flow of the building
+## Q4 — Every flow of the plant
 
 ## Q5 — Where do the bytes go?
 
-## Q6 — From one building to a campus
+## Q6 — From one plant to the group
 
-## Q7 — What the broker says about itself
+## Q7 — What the broker says about itself (◆ deeper)
 
 ## Q8 — Two clients, one identifier
 
-## Q9 — What is wrong with the building's topics?
+## Q9 — What is wrong with the plant's topics?
 
-## Q10 — Your topic tree, justified
+## Q10 — Your namespace, justified
 
-## Q11 — Sparkplug B
+## Q11 — Sparkplug B (◆ deeper)
 
 ## Q12 — What a newcomer receives
 

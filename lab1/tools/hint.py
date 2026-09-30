@@ -16,7 +16,7 @@ SEEN = os.path.join(WORK, ".hints.json")
 
 HINTS = {
     1: [
-        "On the VM, `docker compose ps` lists the four services: broker, relay, building, workstation. "
+        "On the VM, `docker compose ps` lists the four services: broker, relay, plant, workstation. "
         "All should be 'Up'. If one is not, `docker compose logs <service>` says why.",
         "The checker runs inside the workstation. Open it with `docker compose exec workstation bash`, "
         "then type `check 1`. From outside the workstation, `check` does not exist.",
@@ -26,7 +26,7 @@ HINTS = {
         "mosquitto_pub needs a host (-h), a port (-p), a topic (-t) and a message (-m). "
         "The host is relay and the port 1884: everything goes through the relay, never to the broker directly.",
         "Publish: mosquitto_pub -h relay -p 1884 -t lab/hello -m 'hello'. "
-        "Subscribe with a wildcard in a second terminal: mosquitto_sub -h relay -p 1884 -t 'klimo/#' -v",
+        "Subscribe with a wildcard in a second terminal: mosquitto_sub -h relay -p 1884 -t 'hygrolab/#' -v",
         "Quote topics that contain # or +, otherwise your shell may interpret them. "
         "-v prints the topic in front of each message.",
     ],
@@ -35,7 +35,7 @@ HINTS = {
         "and the size of the whole packet. The Topics tab averages them over the last 5 minutes.",
         "The 'data' field of a ChirpStack event is base64. In Python: "
         "len(base64.b64decode('...')). Copy one from the viewer or from mosquitto_sub.",
-        "building_bytes_per_minute: in the Topics tab, for every topic published by the building, "
+        "plant_bytes_per_minute: in the Topics tab, for every topic published by the plant, "
         "messages x avg packet, summed, then divided by 5 (the tab covers 5 minutes). "
         "Leave out your own topics (lab/...).",
     ],
@@ -54,13 +54,13 @@ HINTS = {
         "        time.sleep(5)",
     ],
     5: [
-        "Put the most general level first and the most specific last: site, building, floor, place, "
-        "kind of device, device. A subscription can then pick any level with + and cut the rest with #.",
-        "Every need should take one filter. 'Everything on floor 2' is easy only if the floor is at the same "
-        "level in every topic. 'Every water meter' is easy only if the kind of device is a level of its own. "
-        "The outdoor station has no building and no floor: give it values that no need will catch by mistake.",
-        "One tree that works: adour/<building>/<floor>/<place>/<kind>/<device>, all in lower case, "
-        "for example adour/a/floor-1/a101/env/TL-0001. Then N1 is adour/a/#.",
+        "Follow the ISA-95 hierarchy, from the most general to the most specific: enterprise, site, area, "
+        "cell (work unit), then the device. A subscription can then pick any level with + and cut the rest with #.",
+        "Every need should take one filter. 'Everything in the curing area' is easy only if the area is at the same "
+        "level in every topic. 'Every energy meter' is easy only if the class of device is a level of its own. "
+        "The weather station belongs to the site, not to an area: give it values that no need will catch by mistake.",
+        "One tree that works: <enterprise>/<site>/<area>/<cell>/<class>/<device>, in lower case, "
+        "for example adour/tarnos/curing/autoclave-1/machine/AC-1. Then N1 is adour/tarnos/curing/#.",
     ],
     6: [
         "Two separate things: a retained message on lab/sensors/<name>/status saying online, "

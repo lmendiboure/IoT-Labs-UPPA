@@ -20,17 +20,19 @@ VIEWER = os.getenv("VIEWER", "http://relay:8080")
 HOST = os.getenv("MQTT_HOST", "relay")
 PORT = int(os.getenv("MQTT_PORT", "1884"))
 WORK = os.getenv("WORK", "/work")
+RECORD = os.getenv("RECORD", "/record")
 LAB = os.path.dirname(os.path.realpath(__file__))
 STATE = os.path.join(WORK, ".checks.json")
-BUILDING = {"thermaline-gw", "KL-7F3A", "KL-1EEC", "chirpstack-ns", "door-ctrl", "bms"}
+PLANT = {"hygrolab-gw", "autoclave-ac1", "cnc1-adapter", "cmp1", "modbus2mqtt", "chirpstack",
+         "coldstore-ctrl", "weather-roof", "mes"}
 OK, NO, INFO = "✔", "✘", "·"
 
 TITLES = {
     1: "The lab is running",
     2: "A message by hand, a subscription by hand",
-    3: "Measure the building",
+    3: "Measure the plant",
     4: "Your virtual sensor",
-    5: "A topic tree for the building",
+    5: "A unified namespace for the plant",
     6: "A retained status and a last will",
     7: "A link that dies in silence",
 }
@@ -43,8 +45,8 @@ def api(path):
 
 
 def mine(client_id):
-    """A client of yours: not the building, not this checker."""
-    return bool(client_id) and client_id not in BUILDING and not client_id.startswith("checker-")
+    """A client of yours: not the plant, not this checker."""
+    return bool(client_id) and client_id not in PLANT and not client_id.startswith("checker-")
 
 
 def load(name):
@@ -98,11 +100,11 @@ def ex1(out):
                     "On the VM: docker compose ps")
     out.append((OK, f"the relay answers at {VIEWER}"))
     recent = {p["client"] for p in packets if p["t"] > time.time() - 90 and p["type"] == "PUBLISH"}
-    seen = sorted(recent & BUILDING)
-    if len(seen) < 3:
-        raise Check("the building is silent (fewer than 3 of its devices published in the last 90 s). "
-                    "On the VM: docker compose logs building")
-    out.append((OK, f"the building is talking: {', '.join(seen)}"))
+    seen = sorted(recent & PLANT)
+    if len(seen) < 5:
+        raise Check("the plant is silent (fewer than 5 of its devices published in the last 90 s). "
+                    "On the VM: docker compose logs plant")
+    out.append((OK, f"the plant is talking: {', '.join(seen)}"))
     import paho.mqtt.client as mqtt
     c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"checker-{os.getpid()}")
     try:
@@ -133,10 +135,10 @@ def ex3(out):
     m = load("measurements.json")
     packets = api("/api/packets")
     pubs = [p for p in packets if p["type"] == "PUBLISH" and p["dir"] == "up"]
-    tl = [p for p in pubs if p["topic"] == "thermaline/A101/temperature"]
-    cs = [p for p in pubs if (p["topic"] or "").startswith("application/adour-meters/")]
-    if not tl or not cs:
-        raise Check("the relay has not seen enough of the building yet: wait a minute")
+    cr = [p for p in pubs if p["topic"] == "hygrolab/CR-01/temperature"]
+    cs = [p for p in pubs if (p["topic"] or "").startswith("application/adour-coldchain/")]
+    if not cr or not cs:
+        raise Check("the relay has not seen enough of the plant yet: wait a minute")
     wrong = []
 
     def expect(key, ok, hint):
@@ -148,28 +150,28 @@ def ex3(out):
         else:
             out.append((OK, f"{key} = {v}"))
 
-    sizes = {p["payload_size"] for p in tl}
-    expect("thermaline_payload_bytes", lambda v: v in sizes,
-           "not what the viewer shows for thermaline/A101/temperature (payload column)")
-    sizes = {p["size"] for p in tl}
-    expect("thermaline_packet_bytes", lambda v: v in sizes,
+    sizes = {p["payload_size"] for p in cr}
+    expect("cleanroom_payload_bytes", lambda v: v in sizes,
+           "not what the viewer shows for hygrolab/CR-01/temperature (payload column)")
+    sizes = {p["size"] for p in cr}
+    expect("cleanroom_packet_bytes", lambda v: v in sizes,
            "not the size of the whole PUBLISH packet for that topic (packet column)")
     lo, hi = min(p["payload_size"] for p in cs), max(p["payload_size"] for p in cs)
     expect("chirpstack_payload_bytes", lambda v: lo * 0.95 <= v <= hi * 1.05,
            "not the payload size of a ChirpStack uplink event")
-    expect("meter_data_bytes", lambda v: v == 10,
+    expect("sensor_data_bytes", lambda v: v == 6,
            "decode the base64 'data' field and count the bytes")
     window = 300
     since = time.time() - window
-    recent = [p for p in pubs if p["t"] >= since and p["client"] in BUILDING]
+    recent = [p for p in pubs if p["t"] >= since and p["client"] in PLANT]
     first = min((p["t"] for p in packets), default=time.time())
     span = min(window, time.time() - first)
     if span < 290:
-        wrong.append("building_bytes_per_minute: the lab has been running for less than 5 minutes, "
+        wrong.append("plant_bytes_per_minute: the lab has been running for less than 5 minutes, "
                      "so the Topics tab does not cover 5 minutes yet. Measure again in a moment")
     else:
         truth = sum(p["size"] for p in recent) / span * 60
-        expect("building_bytes_per_minute", lambda v: 0.8 * truth <= v <= 1.2 * truth,
+        expect("plant_bytes_per_minute", lambda v: 0.8 * truth <= v <= 1.2 * truth,
                "more than 20 % away from what the relay measures now")
     if wrong:
         raise Check("; ".join(wrong))
@@ -404,6 +406,9 @@ def report():
     path = os.path.join(WORK, "answers.md")
     if os.path.exists(path):
         lines += ["## Answers", "", open(path).read().strip(), ""]
+    path = os.path.join(RECORD, "site-architecture.md")
+    if os.path.exists(path):
+        lines += ["## Site architecture record", "", open(path).read().strip(), ""]
     out = os.path.join(WORK, "report-lab1.md")
     with open(out, "w") as f:
         f.write("\n".join(lines))

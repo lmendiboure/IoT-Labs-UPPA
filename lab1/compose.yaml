@@ -13,27 +13,28 @@ services:
 
   relay:                        # sits between every client and the broker; shows every packet
     build: ./tools
-    image: lab-tools:1
+    image: lab1-tools:1
     command: python relay.py
     ports:
       - "127.0.0.1:8080:8080"   # the viewer, reached through SSH: ssh -L 8080:localhost:8080 ...
     depends_on: [broker]
     restart: unless-stopped
 
-  building:                     # the Adour building: a few devices, each in its vendor's way
+  plant:                        # the Adour Composites plant: its devices, each in its vendor's way
     build: ./tools
-    image: lab-tools:1
-    command: python building.py
+    image: lab1-tools:1
+    command: python plant.py
     depends_on: [relay]
     restart: unless-stopped
 
-  workstation:                  # where you work: your files are in ./work, seen as /work
+  workstation:                  # where you work: ./work is /work, ../record is /record
     build: ./tools
-    image: lab-tools:1
+    image: lab1-tools:1
     hostname: workstation
     command: sleep infinity
     working_dir: /work
     volumes:
       - ./work:/work
+      - ../record:/record
     depends_on: [relay]
     restart: unless-stopped

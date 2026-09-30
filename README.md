@@ -1,27 +1,82 @@
-# IoT Labs
+# IoT Labs — Adour Composites
 
-Hands-on labs on the Internet of Things: how connected objects talk, how their data travels, how a
-system of thousands of them is designed, operated and secured. Each lab is a three-hour session you
-complete **on your own**, on a virtual machine, with everything you need in this repository.
+Ten hands-on labs on the Internet of Things, built around one plant. You join **Adour Composites**, a
+maker of carbon-fibre parts in Tarnos, as its IoT engineers. Lab after lab, you find out how its data
+travel, fix what is fragile, connect what is not connected yet, and end up defending the architecture
+of the whole site.
 
-## The labs
+Each lab is a three-hour session you complete **on your own**, on a virtual machine, with everything in
+this repository. The plant is simulated, but its data follow its real rhythm: two shifts, cure cycles
+of almost five hours, a freezer door opened a dozen times a day, a compressor that never quite stops.
 
-| Lab | Topic | You will | Status |
-|---|---|---|---|
-| [Lab 1](lab1/) | IoT architecture and first MQTT messages | map an IoT architecture, watch every MQTT packet of a building, become a device, design a topic tree, use retained messages and the last will | available |
-| Lab 2 | MQTT in depth | compare QoS 0, 1 and 2 on a failing link, persistent sessions, keepalive | coming |
-| Lab 3 | The industrial field | read a Modbus controller and an OPC UA server, bridge them to MQTT, meet Sparkplug B | coming |
-| Lab 4 | Low-power networks | LoRaWAN: spreading factor, airtime, gateways, binary payloads | coming |
-| Lab 5 | Energy and fleet | the energy budget of a sensor, battery lifetime, remote management (LwM2M) | coming |
-| Lab 6 | Data and interoperability | one data model for several vendors, SenML, information models | coming |
-| Lab 7 | Edge computing | filter, aggregate and alert close to the devices, store and forward | coming |
-| Lab 8 | IoT platform | time-series storage, dashboards, rules | coming |
-| Lab 9 | Security | TLS, authentication, access control, attack surface | coming |
-| Lab 10 | Architecture case study | design and defend the architecture of a new need | coming |
+## The course map
 
-Each lab stands on its own: missing one does not prevent you from doing the next. They share one
-setting, the **Adour site**, a small campus with two buildings whose devices come from different
-vendors — as on every real site.
+Every lab works on one part of the same chain. Keep this map in mind: whatever the lab, you can always
+say where you are.
+
+```mermaid
+flowchart LR
+    subgraph field["Devices and field"]
+        D["Sensors, machines, controllers"]
+    end
+    subgraph net["Networks"]
+        N["Wired fieldbus, LoRaWAN,<br/>low-power mesh"]
+    end
+    subgraph edge["Edge"]
+        E["Gateways, local rules,<br/>store and forward"]
+    end
+    subgraph plat["Platform"]
+        P["Broker, time series,<br/>device management"]
+    end
+    subgraph app["Applications"]
+        A["Dashboards, alerts,<br/>quality records"]
+    end
+    D --> N --> E --> P --> A
+```
+
+| Lab | The plant's problem | Layers | Protocols and standards | Status |
+|---|---|---|---|---|
+| [1](lab1/) | *Map the plant* — how do the data travel today? | all, through their messages | MQTT, unified namespace, ISA-95 | available |
+| 2 | *Never lose a cure record* — the autoclave's data must survive a failing link | edge ↔ platform | MQTT QoS 0/1/2, sessions, MQTT 5 | coming |
+| 3 | *Talk to the machines* — read the meters and the autoclave's controller directly | field ↔ edge | Modbus TCP, OPC UA, Sparkplug B | coming |
+| 4 | *Through the freezer wall* — long-range radio for the cold store | field ↔ networks | LoRaWAN: spreading factor, airtime, duty cycle | coming |
+| 5 | *Sensors that sleep* — battery devices in the cleanroom, managed remotely | field ↔ networks ↔ platform | CoAP, CBOR, LwM2M, energy budget | coming |
+| 6 | *One language for the plant* — units, time, identity, meaning | platform | SenML, Asset Administration Shell | coming |
+| 7 | *Decide on the spot* — alarms and filtering close to the devices | edge | edge rules, hysteresis, store and forward | coming |
+| 8 | *See the plant* — time series, dashboards, KPIs | platform ↔ applications | InfluxDB, Grafana, OEE | coming |
+| 9 | *Lock the doors* — who may publish what, and who can listen | every layer | TLS, authentication, ACL, IEC 62443 | coming |
+| 10 | *Defend your architecture* — a new need, your record, your choices | all | — | coming |
+
+### Which protocol for what
+
+The course meets several protocols. They do not compete: each answers a different question, at a
+different place in the chain.
+
+| Protocol | Model | Runs over | Made for | Lab |
+|---|---|---|---|---|
+| **MQTT** | publish / subscribe, through a broker | TCP | many devices and applications that must not know each other | 1, 2 |
+| **Modbus TCP** | request / response, registers | TCP | reading and writing a controller's values, simply; the oldest fieldbus still everywhere | 3 |
+| **OPC UA** | client / server, and publish / subscribe | TCP (and MQTT) | industrial machines that describe their own data | 3 |
+| **LoRaWAN** | uplinks from devices, through gateways, to a network server | radio, sub-GHz | a few bytes, kilometres away, for years on a battery | 4 |
+| **CoAP** | request / response, like HTTP, with observation | UDP | very constrained devices and networks | 5 |
+| **LwM2M** | device management, a standard object model | CoAP | configuring, updating and monitoring a fleet | 5 |
+| **HTTP / REST** | request / response | TCP | applications and platform APIs | 6, 8 |
+
+## Going deep without getting lost
+
+Every lab is built the same way, so that you always know what is expected.
+
+- **Background first.** Each part opens with the notions you need, explained. You do not need to have
+  memorised the lecture — but you will find its vocabulary.
+- **Three levels for every protocol.** You **use** it (make it work), you **see** it (watch its packets,
+  count its bytes, measure its delays), and you **decide** with it (choose a setting and defend it).
+  Each question says which: `Use`, `See`, `Decide`, or `Research` when you must look something up.
+- **Core and deeper.** Questions marked **◆ Deeper** are for those who have finished: skipping them
+  never blocks you.
+- **What to remember.** Each part ends with the two or three ideas to keep.
+- **One record for the whole course.** The file `record/site-architecture.md` is your team's
+  architecture of the plant. Each lab adds a section and logs its decisions; Lab 10 is its defence.
+  It is what ties the labs together.
 
 ## How a lab works
 
@@ -29,28 +84,26 @@ vendors — as on every real site.
 flowchart LR
     laptop["Your laptop<br/>VS Code or a terminal"]
     subgraph vm["Your VM, with Docker"]
-        ws["Your workstation<br/>Python, MQTT tools, check, hint"]
-        env["The lab's environment<br/>broker, simulated devices, tools"]
+        ws["Your workstation<br/>Python, tools, check, hint"]
+        env["The lab's environment<br/>broker, simulated plant, tools"]
     end
     laptop -- "SSH, then docker compose exec" --> ws
     ws <--> env
 ```
 
 - **Your VM.** You reach it with SSH. The comfortable way is **VS Code with the Remote – SSH
-  extension**: an editor and terminals on the VM, and web pages of the VM forwarded to your laptop.
-- **One folder per lab.** Each holds a `compose.yaml` that starts the lab's environment in Docker,
-  and a `work/` folder for your files. You work inside a container called the **workstation**, which
-  sees `work/` as `/work`.
-- **The subject** is the lab's `README.md`. Each part starts with the background you need, then gives
-  exercises and questions.
-- **Exercises** are checked by a program: type `check` in the workstation, each exercise turns ✔ or
-  ✘ with the reason.
-- **Questions** ask you to observe, measure, explain, and sometimes to look something up. Write your
-  answers in `work/answers.md` as you go. When a question says *research*, cite your sources.
+  extension**: an editor and terminals on the VM, and the VM's web pages forwarded to your laptop.
+- **One folder per lab.** Each holds a `compose.yaml` that starts the lab's environment in Docker, and
+  a `work/` folder for your files. You work inside a container called the **workstation**, which sees
+  `work/` as `/work` and the record as `/record`.
+- **The subject** is the lab's `README.md`.
+- **Exercises** are checked by a program: type `check` in the workstation, each exercise turns ✔ or ✘
+  with the reason.
+- **Questions** are answered in `work/answers.md`, as you go.
 - **Stuck?** `hint <exercise>` gives the next hint, one step at a time. The last one is close to the
   answer: try the others first.
-- **Hand in** the file that `check report` writes: your answers, your files, and which exercises were
-  confirmed, with the time.
+- **Hand in** the file that `check report` writes: your answers, your files, your record, and which
+  exercises were confirmed, with the time.
 
 ## Getting a lab onto your VM
 
@@ -62,13 +115,15 @@ cd ~/iot-labs/lab1
 docker compose up -d
 ```
 
-Later, to get a new lab: `cd ~/iot-labs && git pull`.
+To get a new lab later: `cd ~/iot-labs && git pull`.
 
 ## Rules of the game
 
 - Work on your own VM; do not share it.
-- Answers are graded, not the ✔ of the checker: a working exercise with a vague answer is worth
-  little. Short and precise beats long: a table, a figure with its unit, the source of what you
-  looked up.
-- You may use any documentation, search engine or assistant, as long as you understand and can
-  defend every line you hand in. Cite what you used.
+- Answers are graded, not the ✔ of the checker: a working exercise with a vague answer is worth little.
+  Short and precise beats long: a table, a figure with its unit, the source of what you looked up.
+- You may use any documentation, search engine or assistant, as long as you understand and can defend
+  every line you hand in. Cite what you used.
+
+*Adour Composites, its people and its data are fictional. The protocols, standards and orders of
+magnitude are real.*
