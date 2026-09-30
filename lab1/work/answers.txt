@@ -1,0 +1,145 @@
+LAB 1 — MAP THE PLANT — ANSWERS
+Team: (your names)
+
+Write each answer under its question, in plain text. Short and precise beats long: a figure with its
+unit, a small table, the source of what you looked up (a URL, a section number). Note the day and
+time of your observations: the plant has a rhythm.
+
+-- Q1. One device through the course's lenses -------------------------------------------------
+
+Device chosen (freezer probe, autoclave or main energy meter):
+  sense:
+  compute:
+  power:
+  connect:
+  backhaul:
+  use:
+What I had to assume:
+The reference model I looked up, and how it cuts the chain differently:
+Sources:
+
+-- Q2. The architecture of this lab ------------------------------------------------------------
+
+Drawing (boxes and arrows in text are fine; or describe it):
+
+The component that would not exist on a real site, and what would play its role:
+Why the broker's log shows the same address for every client:
+
+-- Q3. Five flows of the plant -----------------------------------------------------------------
+
+Observed on (day, time):
+
+Flow A — cleanroom temperature, CR-01
+  publisher (client id):
+  topic:
+  payload format:
+  unit, time format:
+  period:
+  payload bytes / packet bytes:
+  QoS / retained:
+  who needs it, for what:
+
+Flow B — freezer probe near the door, FRZ1-T1
+  publisher (client id):
+  topic:
+  payload format:
+  unit, time format:
+  period:
+  payload bytes / packet bytes:
+  QoS / retained:
+  who needs it, for what:
+
+Flow C — freezer door, FRZ1-DOOR
+  publisher (client id):
+  topic:
+  payload format:
+  unit, time format:
+  period:
+  payload bytes / packet bytes:
+  QoS / retained:
+  who needs it, for what:
+
+Flow D — autoclave, AC-1
+  publisher (client id):
+  topic:
+  payload format:
+  unit, time format:
+  period:
+  payload bytes / packet bytes:
+  QoS / retained:
+  who needs it, for what:
+
+Flow E — main energy meter, power, EM-MAIN
+  publisher (client id):
+  topic:
+  payload format:
+  unit, time format:
+  period:
+  payload bytes / packet bytes:
+  QoS / retained:
+  who needs it, for what:
+
+-- Q4. Where do the bytes go? ------------------------------------------------------------------
+
+Cleanroom packet, byte by byte:
+Share of the packet that is the value:
+Freezer probe event: share of the payload that is the probe's own data, and what the rest is:
+Two ways to send fewer bytes:
+
+-- Q5. Two clients, one identifier ------------------------------------------------------------
+
+What happened:
+What the specification says (section):
+What it would mean in the plant, and how manufacturers avoid it:
+The client id of mosquitto_pub in exercise 2, and where it comes from:
+
+-- Q6. What is wrong with the plant's topics? --------------------------------------------------
+
+(at least five problems, each with the trouble it causes to a subscriber)
+1.
+2.
+3.
+4.
+5.
+Why nobody can subscribe to "everything in the curing area" today:
+
+-- Q7. Your namespace, justified ---------------------------------------------------------------
+
+The order of the levels, and where ISA-95 helped:
+Why a measured value never belongs in a topic:
+The CNC router moves to a new cell:
+A need your namespace cannot serve with one filter:
+
+-- Q8. What a newcomer receives ----------------------------------------------------------------
+
+What arrives in the first second, and why:
+A case where retaining would be a mistake:
+How a retained message is deleted:
+
+-- Q9. How long before the broker notices? -----------------------------------------------------
+
+Freeze at:            offline at:            delay:
+Explanation (specification section 3.1.2.10):
+DISCONNECT / Ctrl+C / frozen link — when is the will published?
+Radio wake-ups per hour with a 15 s keepalive, and what it costs a battery device:
+
+-- Q10. Birth, death and goodbye of a gateway ---------------------------------------------------
+
+Why the status stayed offline, and the fix:
+The cleanroom gateway's status messages (topic, payload, QoS, retain):
+  when it starts:
+  its last will:
+  when it is shut down on purpose:
+
+
+===================================== ◆ DEEPER (optional) =====================================
+
+-- D1. Why not HTTPS for the cleanroom? -------------------------------------------------------
+
+-- D2. From one plant to the group ------------------------------------------------------------
+
+-- D3. What the broker says about itself -----------------------------------------------------
+
+-- D4. Sparkplug B ---------------------------------------------------------------------------
+
+-- Exercise 8. Your bridge: what it does, and what you would add for the other devices --------

@@ -3,14 +3,16 @@
 
     check            every exercise
     check 4          exercise 4 only
-    check report     writes report-lab1.md, the file you hand in
+    check report     writes report-lab1.txt, the file you hand in
 
 It reads what the relay saw (every MQTT packet of the lab goes through it)
 and the files you write in /work. Nothing here changes your work.
 """
+import base64
 import json
 import os
 import statistics
+import struct
 import sys
 import time
 import urllib.request
@@ -35,7 +37,9 @@ TITLES = {
     5: "A unified namespace for the plant",
     6: "A retained status and a last will",
     7: "A link that dies in silence",
+    8: "Build the bridge",
 }
+CORE, DEEPER = [1, 2, 3, 4, 5, 6, 7], [8]
 
 
 # ---------------------------------------------------------------- helpers
@@ -60,8 +64,15 @@ def load(name):
         raise Check(f"{name} is not valid JSON: {e.msg} at line {e.lineno}, column {e.colno}")
 
 
+try:                                     # the plant's clock, whatever the container's
+    from zoneinfo import ZoneInfo
+    PLANT_TZ = ZoneInfo(os.getenv("PLANT_TZ", "Europe/Paris"))
+except Exception:
+    PLANT_TZ = None
+
+
 def hhmm(t):
-    return datetime.fromtimestamp(t).strftime("%H:%M:%S")
+    return datetime.fromtimestamp(t, PLANT_TZ).strftime("%H:%M:%S")
 
 
 def topic_matches(filt, topic):
@@ -343,7 +354,109 @@ def ex7(out):
     out.append((OK, f"{x['client_id']} (keepalive {x['keepalive']} s): {x['end']}"))
 
 
-EXERCISES = {1: ex1, 2: ex2, 3: ex3, 4: ex4, 5: ex5, 6: ex6, 7: ex7}
+PSI_TO_BAR = 0.0689476
+PROBES = {"70b3d57ed0058a21": "FRZ1-T1", "70b3d57ed0058a37": "FRZ1-T2"}
+BRIDGED = [  # (devices, key the bridge must publish, tolerance, unit, where the plant publishes it)
+    (["CR-01"], "temperature_c", 0.051, "°C", "hygrolab/CR-01/temperature"),
+    (["CMP-1"], "pressure_bar", 0.011, "bar", "compressors/CMP1"),
+    (["FRZ1-T1", "FRZ1-T2"], "temperature_c", 0.051, "°C", "application/adour-coldchain/.../event/up"),
+]
+
+
+def originals(packets):
+    """What the plant itself published, decoded: {device: [(relay time, value, device time), ...]}."""
+    got = {"CR-01": [], "CMP-1": [], "FRZ1-T1": [], "FRZ1-T2": []}
+    for p in packets:
+        if p["type"] != "PUBLISH" or p["dir"] != "up" or p["client"] not in PLANT:
+            continue
+        topic, payload = p["topic"] or "", p["payload"] or ""
+        try:
+            if topic == "hygrolab/CR-01/temperature":
+                got["CR-01"].append((p["t"], float(payload), p["t"]))
+            elif topic == "compressors/CMP1":
+                d = json.loads(payload)
+                got["CMP-1"].append((p["t"], d["pressure_psi"] * PSI_TO_BAR, float(d["timestamp"])))
+            elif topic.startswith("application/adour-coldchain/device/") and topic.split("/")[3] in PROBES:
+                d = json.loads(payload)
+                centi = struct.unpack(">BhBBB", base64.b64decode(d["data"]))[1]
+                when = datetime.fromisoformat(d["time"].replace("Z", "+00:00")).timestamp()
+                got[PROBES[topic.split("/")[3]]].append((p["t"], centi / 100, when))
+        except (ValueError, KeyError, TypeError, IndexError, struct.error):
+            pass
+    return got
+
+
+def ex8(out):
+    tree = load("tree.json")
+    missing = [d for devs, *_ in BRIDGED for d in devs if not isinstance(tree.get(d), str)]
+    if missing:
+        raise Check(f"tree.json has no topic for {', '.join(missing)}: the bridge publishes on the "
+                    "topics of your namespace (exercise 5)")
+    packets = api("/api/packets")
+    orig = originals(packets)
+    since = time.time() - 900
+    problems = []
+    for devs, key, tol, unit, source in BRIDGED:
+        msgs = []
+        for p in packets:
+            if (p["type"] == "PUBLISH" and p["dir"] == "up" and p["t"] >= since and mine(p["client"])
+                    and p["topic"] in [tree[d] for d in devs]):
+                try:
+                    d = json.loads(p["payload"])
+                except (TypeError, json.JSONDecodeError):
+                    continue
+                if isinstance(d, dict) and key in d:
+                    msgs.append((p, d))
+        if not msgs:
+            where = " or ".join(tree[d] for d in devs)
+            problems.append(f"{' / '.join(devs)}: no JSON message of yours with a {key} field on {where} "
+                            "in the last 15 minutes")
+            continue
+        p, d = msgs[-1]
+        dev = next(x for x in devs if tree[x] == p["topic"])
+        v = d[key]
+        if not isinstance(v, (int, float)) or isinstance(v, bool):
+            problems.append(f"{dev}: {key} = {v!r} is not a number")
+            continue
+        window = [o for o in orig[dev] if p["t"] - 90 <= o[0] <= p["t"] + 1]
+        match = min(window, key=lambda o: abs(o[1] - v), default=None)
+        if match is None:
+            problems.append(f"{dev}: the relay saw nothing from the plant on {source} in the 90 s before "
+                            "your message: is the plant running?")
+            continue
+        if abs(match[1] - v) > tol:
+            def near(f, eps):
+                return any(abs(v - f(o[1])) < eps for o in window)
+            why = f"{dev}: {key} = {v}, but the plant said {window[-1][1]:.2f} {unit} just before"
+            if key == "pressure_bar" and near(lambda x: x / PSI_TO_BAR, 0.2):
+                why += " — that is still psi"
+            elif dev.startswith("FRZ") and near(lambda x: x * 100, 1):
+                why += " — divide the raw number by 100"
+            elif dev.startswith("FRZ") and (near(lambda x: x * 100 + 65536, 1)
+                                            or near(lambda x: x + 655.36, 0.02)):
+                why += " — the temperature is a signed number"
+            problems.append(why)
+            continue
+        try:
+            when = datetime.fromisoformat(str(d.get("measured_at")).replace("Z", "+00:00"))
+        except ValueError:
+            problems.append(f"{dev}: measured_at missing or not an ISO 8601 date")
+            continue
+        if when.tzinfo is None:
+            problems.append(f"{dev}: measured_at = {d['measured_at']} has no time zone: say it is UTC")
+            continue
+        gap = when.timestamp() - match[2]
+        if abs(gap) > 60:
+            problems.append(f"{dev}: measured_at is {gap:+.0f} s away from when the device measured: "
+                            "check its time zone, or use the device's own time when it gives one")
+            continue
+        out.append((OK, f"{dev} -> {p['topic']}: {key} {v} (the plant: {match[1]:.2f} {unit}), "
+                        f"by {p['client']}"))
+    if problems:
+        raise Check("; ".join(problems))
+
+
+EXERCISES = {1: ex1, 2: ex2, 3: ex3, 4: ex4, 5: ex5, 6: ex6, 7: ex7, 8: ex8}
 
 
 # ---------------------------------------------------------------- running
@@ -365,7 +478,7 @@ def run(n, quiet=False):
     except OSError as e:
         ok, why = False, f"cannot reach the lab: {e}"
     if not quiet:
-        print(f"\nExercise {n} — {TITLES[n]}")
+        print(f"\nExercise {n} — {TITLES[n]}{'  (◆ deeper)' if n in DEEPER else ''}")
         for mark, line in out:
             print(f"  {mark} {line}")
         if not ok:
@@ -382,36 +495,45 @@ def run(n, quiet=False):
     return ok, out, why
 
 
+REPORT_FILES = ["answers.txt", "measurements.json", "tree.json", "subscriptions.json", "sensor.py", "bridge.py"]
+
+
+def banner(title):
+    return ["", "=" * 76, title, "=" * 76, ""]
+
+
 def report():
+    import textwrap
     s = state()
-    lines = [f"# Lab 1 — report", "", f"Written {datetime.now():%Y-%m-%d %H:%M}.", "",
-             "| Exercise | Now | First passed |", "|---|---|---|"]
+    lines = ["LAB 1 — MAP THE PLANT — REPORT",
+             f"Written by `check report` on {datetime.now(PLANT_TZ):%Y-%m-%d at %H:%M} (plant time). "
+             "Hand this file in as it is."]
+    lines += banner("EXERCISES (as the checker sees them now)")
     for n in EXERCISES:
         ok, _, why = run(n, quiet=True)
-        first = hhmm(s[str(n)]) if str(n) in s else "—"
-        lines.append(f"| {n} — {TITLES[n]} | {'passed' if ok else 'not yet: ' + why.replace('|', '/')} | {first} |")
+        name = f"{n}. {TITLES[n]}{' (deeper)' if n in DEEPER else ''}"
+        first = f"first passed at {hhmm(s[str(n)])}" if str(n) in s else "never passed"
+        lines.append(f"{name:<48} {'passed' if ok else 'NOT YET':<8} {first}")
+        if not ok:
+            lines += textwrap.wrap(why, 72, initial_indent="    ", subsequent_indent="    ")
     try:
         hints = json.load(open(os.path.join(WORK, ".hints.json")))
     except (OSError, json.JSONDecodeError):
         hints = {}
-    lines += ["", "Hints opened: " + (", ".join(f"exercise {k}: {v}" for k, v in sorted(hints.items())) or "none"), ""]
-    for name in ("measurements.json", "tree.json", "subscriptions.json"):
+    lines += ["", "Hints opened: " + (", ".join(f"exercise {k} up to hint {v}"
+                                                for k, v in sorted(hints.items())) or "none")]
+    for name in REPORT_FILES:
         path = os.path.join(WORK, name)
-        if os.path.exists(path):
-            lines += [f"## {name}", "", "```json", open(path).read().strip(), "```", ""]
-    for name in ("sensor.py",):
-        path = os.path.join(WORK, name)
-        if os.path.exists(path):
-            lines += [f"## {name}", "", "```python", open(path).read().strip(), "```", ""]
-    path = os.path.join(WORK, "answers.md")
-    if os.path.exists(path):
-        lines += ["## Answers", "", open(path).read().strip(), ""]
+        lines += banner(f"work/{name}")
+        lines += [open(path, encoding="utf-8", errors="replace").read().rstrip()
+                  if os.path.exists(path) else "(no such file)"]
     path = os.path.join(RECORD, "site-architecture.md")
-    if os.path.exists(path):
-        lines += ["## Site architecture record", "", open(path).read().strip(), ""]
-    out = os.path.join(WORK, "report-lab1.md")
-    with open(out, "w") as f:
-        f.write("\n".join(lines))
+    lines += banner("record/site-architecture.md")
+    lines += [open(path, encoding="utf-8", errors="replace").read().rstrip()
+              if os.path.exists(path) else "(no such file)"]
+    out = os.path.join(WORK, "report-lab1.txt")
+    with open(out, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
     print(f"written: {out} — hand this file in.")
 
 
@@ -420,8 +542,15 @@ def main():
     if args and args[0] == "report":
         return report()
     todo = [int(a) for a in args if a.isdigit() and int(a) in EXERCISES] or list(EXERCISES)
-    passed = sum(run(n)[0] for n in todo)
-    print(f"\n{passed}/{len(todo)} passed")
+    results = {n: run(n)[0] for n in todo}
+    core = [n for n in todo if n in CORE]
+    deeper = [n for n in todo if n in DEEPER]
+    summary = []
+    if core:
+        summary.append(f"{sum(results[n] for n in core)}/{len(core)} passed")
+    if deeper:
+        summary.append(f"deeper: {sum(results[n] for n in deeper)}/{len(deeper)}")
+    print("\n" + ", ".join(summary))
 
 
 if __name__ == "__main__":

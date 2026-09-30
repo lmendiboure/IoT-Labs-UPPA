@@ -10,7 +10,7 @@ Keep it short and precise: a diagram, a table, a sentence per decision. A sectio
 may be wrong by Lab 5 — revise it, and say so in the log. Every decision is written the way the
 lectures ask: the constraint, the option retained, the option rejected, and the reason.
 
-## 1. Context and needs *(Lab 1)*
+## 1. Context and needs *(Lab 1, at home before Lab 2)*
 
 Three uses of the plant's data, each in the five lines of L1:
 
@@ -22,16 +22,16 @@ Three uses of the plant's data, each in the five lines of L1:
 | Whose network | | | |
 | Who is still there in ten years | | | |
 
-## 2. Architecture overview *(Lab 1, revised in every lab)*
+## 2. Architecture overview *(Lab 1, at home before Lab 2; revised in every lab)*
 
 A diagram of the site's data path, layer by layer: devices, networks, gateways, broker, platform,
 applications. A Mermaid diagram (GitHub draws it) or an image in this folder.
 
-## 3. Unified namespace *(Lab 1)*
+## 3. Unified namespace *(Lab 1, in the lab)*
 
 The structure of the plant's topic tree, with two or three examples, and the rules that go with it.
 
-## 4. Device status and liveness *(Lab 1)*
+## 4. Device status and liveness *(Lab 1, in the lab)*
 
 How the site knows that a device is alive: topics, payloads, QoS, retain flags, keepalive.
 

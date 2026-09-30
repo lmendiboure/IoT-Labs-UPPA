@@ -78,6 +78,30 @@ HINTS = {
         "The MQTT specification (3.1.1, section 3.1.2.10) says how long the broker waits: search for "
         "'one and a half times the Keep Alive'.",
     ],
+    8: [
+        "A bridge is a client that subscribes and publishes. Subscribe to the three sources "
+        "(hygrolab/CR-01/temperature, compressors/CMP1, application/adour-coldchain/device/+/event/up); "
+        "subscribe in on_connect, so that a reconnection subscribes again; in on_message, look at msg.topic to know which one arrived, "
+        "compute the clean value, and publish it on that device's topic from your tree.json.",
+        "The three conversions. Cleanroom: float(msg.payload), no timestamp in the message, so use the time "
+        "you received it. Compressor: json.loads, pressure_psi * 0.0689476 gives bar, and 'timestamp' is "
+        "seconds since 1970 (datetime.fromtimestamp(ts, timezone.utc)). Freezer: json.loads, "
+        "base64.b64decode(event['data']) gives 6 bytes, and struct.unpack('>BhBBB', raw) gives "
+        "(frame type, temperature in hundredths of a degree, humidity, battery, status); the time is in event['time'].",
+        "Skeleton:\n"
+        "    TREE = json.load(open('/work/tree.json'))\n"
+        "    def on_connect(c, u, flags, rc, props):\n"
+        "        for f in ('hygrolab/CR-01/temperature', 'compressors/CMP1',\n"
+        "                  'application/adour-coldchain/device/+/event/up'):\n"
+        "            c.subscribe(f)\n"
+        "    def on_message(c, u, msg):\n"
+        "        if msg.topic == 'compressors/CMP1':\n"
+        "            d = json.loads(msg.payload)\n"
+        "            out = {'pressure_bar': round(d['pressure_psi'] * 0.0689476, 3),\n"
+        "                   'measured_at': datetime.fromtimestamp(d['timestamp'], timezone.utc).isoformat()}\n"
+        "            c.publish(TREE['CMP-1'], json.dumps(out))\n"
+        "        elif ...  # the cleanroom, then the freezer probes (map each probe's deviceName to FRZ1-T1 or FRZ1-T2)",
+    ],
 }
 
 

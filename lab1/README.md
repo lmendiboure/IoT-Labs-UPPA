@@ -1,10 +1,14 @@
 # Lab 1 — Map the plant: IoT architecture and first MQTT messages
 
-**Duration:** 3 hours, on your own. **You hand in:** `work/report-lab1.md`, written by `check report`.
+**Duration:** 3 hours, on your own. **You hand in:** `work/report-lab1.txt`, written by `check report`.
 **Where this lab sits:** the whole chain, from device to use, seen through its messages
 (see the [course map](../README.md#the-course-map)). **Protocol:** MQTT.
 **From the lectures:** L1 (the six blocks, the five lines), L3 part 1 (reference models) and part 5
 (publish/subscribe, MQTT).
+
+> **Before the session (15 min).** Connect to your VM, start the lab and run `check 1`
+> ([section B](#b-getting-started-10-min)), then read [section A](#a-the-plant-and-what-it-expects-from-you).
+> If `check 1` does not pass, tell your teacher before the session: three hours go fast.
 
 You join Adour Composites as IoT engineers. In this first lab you map how the plant's data travel
 today, watch every MQTT packet it exchanges, become a device yourself, design the plant's **unified
@@ -15,32 +19,45 @@ last will.
 
 - name the layers of an IoT system and place real components in them;
 - publish and subscribe with MQTT, from the command line and from Python;
-- account for every byte of an MQTT message, and estimate the traffic of a site;
+- account for every byte of an MQTT message;
 - design a topic namespace that serves the applications that will subscribe to it;
 - tell, at any moment, whether a device is alive — and know how long it takes to find out.
 
 ## Contents
 
 - [A. The plant, and what it expects from you](#a-the-plant-and-what-it-expects-from-you)
-- [B. Getting started](#b-getting-started-15-min)
-- [C. Part 1 — Architecture](#c-part-1--architecture-30-min)
+- [B. Getting started](#b-getting-started-10-min)
+- [C. Part 1 — Architecture](#c-part-1--architecture-20-min)
 - [D. Part 2 — Watch the plant talk](#d-part-2--watch-the-plant-talk-45-min)
 - [E. Part 3 — Become a device](#e-part-3--become-a-device-25-min)
 - [F. Part 4 — A unified namespace for the plant](#f-part-4--a-unified-namespace-for-the-plant-35-min)
 - [G. Part 5 — Retained messages and last will](#g-part-5--retained-messages-and-last-will-30-min)
-- [H. Your site architecture record](#h-your-site-architecture-record)
+- [H. Your site architecture record](#h-your-site-architecture-record-15-min)
 - [I. Hand in](#i-hand-in)
 - [J. Going further](#j-going-further)
 - [K. When something goes wrong](#k-when-something-goes-wrong)
+- [L. Python, JSON and the terminal in ten lines](#l-python-json-and-the-terminal-in-ten-lines)
 
-| Part | Time | Exercises | Questions |
-|---|---|---|---|
-| Getting started | 15 min | — | — |
-| 1 — Architecture | 30 min | 1 | 1–3 |
-| 2 — Watch the plant talk | 45 min | 2, 3 | 4–7 |
-| 3 — Become a device | 25 min | 4 | 8 |
-| 4 — A unified namespace | 35 min | 5 | 9–11 |
-| 5 — Retained messages and last will | 30 min | 6, 7 | 12–14 |
+| Part | Time | Exercises | Questions | ◆ Deeper |
+|---|---|---|---|---|
+| Getting started | 10 min | (1, done before) | — | — |
+| 1 — Architecture | 20 min | — | 1, 2 | D1 |
+| 2 — Watch the plant talk | 45 min | 2, 3 | 3, 4 | D2, D3 |
+| 3 — Become a device | 25 min | 4 | 5 | — |
+| 4 — A unified namespace | 35 min | 5 | 6, 7 | D4, exercise 8 |
+| 5 — Retained messages and last will | 30 min | 6, 7 | 8, 9, 10 | — |
+| Record, hand in | 15 min | — | — | — |
+
+The **core** of the lab is questions 1 to 10, exercises 1 to 7, and sections 3 and 4 of the record.
+Everything marked **◆ Deeper** is optional: do it once the core is done, in any order.
+
+> **Pace yourself.**
+> - At the break (1 h 30), you should have finished Part 2.
+> - If at 2 h you have not started Part 4, do exercises 5, 6 and 7 first — they build on each other —
+>   then come back to the questions you left.
+> - Leave every ◆ item for the end.
+> - 15 minutes before the end, whatever happens: write sections 3 and 4 of the record, then
+>   `check report`. A report handed in on time beats a perfect one never handed in.
 
 **How to read the questions.** Each question says what it asks of you, and which notion of the
 lectures it uses (L1, L2, L3 and the part):
@@ -52,7 +69,7 @@ lectures it uses (L1, L2, L3 and the part):
 | `Decide` | choose, and justify the choice against its alternatives |
 | `Research` | look it up, and cite your sources |
 
-Questions marked **◆ Deeper** go further; do them once the others are done.
+Answer in **`work/answers.txt`**, as you go: it already holds a place for every question.
 
 ---
 
@@ -135,9 +152,14 @@ alive, `DISCONNECT` to leave. In this lab you will see each of them go by.
 directly, or the viewer and the checker cannot see you. In the workstation, the variables `MQTT_HOST`
 and `MQTT_PORT` already say so.
 
+New to the terminal, JSON or Python? Keep [section L](#l-python-json-and-the-terminal-in-ten-lines)
+open: it holds everything this lab needs.
+
 ---
 
-## B. Getting started (15 min)
+## B. Getting started (10 min)
+
+*Do this before the session, and again at its start if your VM was restarted.*
 
 ### Connect to your VM
 
@@ -194,28 +216,6 @@ Then open **http://localhost:8080** in your laptop's browser. The **viewer** has
   publishes.
 - **Clients** — every connection: its settings, its traffic, and how it ended.
 
----
-
-## C. Part 1 — Architecture (30 min)
-
-### Background: layers
-
-An IoT system is a chain: something is measured, carried over a network, collected, stored, processed,
-and finally used. Reference architectures cut this chain into **layers**, each with its own
-technologies and its own constraints. Knowing the layers tells you where a problem lives, and who is
-responsible for it. The [course map](../README.md#the-course-map) places every lab of this course on
-such a chain.
-
-> **Question 1 — The plant through the course's lenses** · `Research` · *six blocks (L1, part 2),
-> reference models (L3, part 1)*
->
-> Take three devices of the plant: a freezer probe, the autoclave, the main energy meter. For each,
-> fill the six blocks of L1 — sense, compute, power, connect, backhaul, use — as far as the tables of
-> section A let you, and say what you had to assume. Then look up one layered reference model of IoT
-> systems (ITU-T Y.2060, IEEE 2413, or a cloud provider's) and the ISA-95 automation pyramid. Where do
-> they cut the chain differently from the six blocks, and why does industry keep ISA-95? Cite your
-> sources.
-
 ### Exercise 1 — The lab is running
 
 In the workstation:
@@ -237,6 +237,26 @@ Exercise 1 — The lab is running
 
 Stuck? `hint 1`.
 
+---
+
+## C. Part 1 — Architecture (20 min)
+
+### Background: layers
+
+An IoT system is a chain: something is measured, carried over a network, collected, stored, processed,
+and finally used. Reference architectures cut this chain into **layers**, each with its own
+technologies and its own constraints. Knowing the layers tells you where a problem lives, and who is
+responsible for it. L1 cut it into **six blocks** — sense, compute, power, connect, backhaul, use — and
+the [course map](../README.md#the-course-map) places every lab of this course on such a chain.
+
+> **Question 1 — One device through the course's lenses** · `Research` · *six blocks (L1, part 2),
+> reference models (L3, part 1)*
+>
+> Choose **one** device of the plant: a freezer probe, the autoclave, or the main energy meter. Fill
+> its six blocks as far as the tables of section A let you, and say what you had to assume. Then look
+> up one layered reference model of IoT systems (ITU-T Y.2060, IEEE 2413, or a cloud provider's): name
+> its layers, and say where it cuts the chain differently from the six blocks. Cite your source.
+
 Now explore the lab from the **VM** (not the workstation). Read `compose.yaml`, then:
 
 ```bash
@@ -251,11 +271,12 @@ in the network.
 > **Question 2 — The architecture of this lab** · `See` · *tiers and placement (L3, part 7)*
 >
 > Draw the architecture of the lab: every container, the ports, the protocols, and the direction in
-> which data flow. Place each container in one of the layers of question 1. One component would not
-> exist on a real site: which one, why is it here, and what would play its role in the plant? Why does
-> the broker's log show the same address for every client?
+> which data flow (boxes and arrows in text are fine). Place each container in one of the six blocks
+> or layers of question 1. One component would not exist on a real site: which one, why is it here,
+> and what would play its role in the plant? Why does the broker's log show the same address for
+> every client?
 
-> **Question 3 — Why not HTTPS for the cleanroom?** · `Decide` · *the cost of a short exchange
+> **◆ Deeper D1 — Why not HTTPS for the cleanroom?** · `Decide` · *the cost of a short exchange
 > (L3, part 4), interaction patterns (L3, part 5)*
 >
 > The cleanroom's gateway could POST each reading to a web server over HTTPS instead of publishing it
@@ -283,7 +304,7 @@ topics at once. Topics are made of levels separated by `/`:
 | `hygrolab/CR-01/temperature` | exactly that topic | anything else |
 | `hygrolab/+/temperature` | the temperature of every cleanroom sensor — `+` is exactly one level | `hygrolab/CR-01/humidity` |
 | `hygrolab/#` | every topic under `hygrolab/`, at any depth — `#` is the rest, and comes last | `cnc/router1/state` |
-| `#` | every topic | (almost — see question 7) |
+| `#` | every topic | (almost — see ◆ D3) |
 
 The command-line tools `mosquitto_sub` and `mosquitto_pub` come with Mosquitto. Their options: `-h`
 host, `-p` port, `-t` topic, `-m` message, `-v` print the topic before each message, `-q` QoS, `-r`
@@ -318,14 +339,16 @@ mosquitto_pub -h relay -p 1884 -t lab/hello -m 'hello from team X'
 Find both in the viewer: your `SUBSCRIBE` and its `SUBACK`; your `CONNECT`, `PUBLISH` and `DISCONNECT`.
 Then `check 2`. Stuck? `hint 2`.
 
-> **Question 4 — Every flow of the plant** · `See` · *topics, payloads, formats*
+> **Question 3 — Five flows of the plant** · `See` · *topics, payloads, formats*
 >
-> Subscribe to `#` for two minutes, and use the viewer's *Topics* tab. Fill a table with one line per
-> kind of flow: the device that publishes it, its topic (or topic pattern), the payload format (bare
-> value, JSON…), the unit and time format when there is one, how often it is published, the payload
-> size and the packet size, the QoS, and whether it is retained. Add a last column: *who in the plant
-> needs it, and for what* (think of the plant manager's three expectations). Some flows are published
-> only every few minutes: wait for them.
+> Subscribe to `#` for two minutes and use the viewer's *Topics* tab to find five flows: the
+> cleanroom temperature of CR-01, the freezer probe near the door, the freezer door, the autoclave,
+> and the power of the main energy meter. For each, fill the block ready in `answers.txt`: the client
+> that publishes it, its topic, the payload format (bare value, JSON…), the unit and time format when
+> there is one, how often it is published, the payload and packet sizes, the QoS, whether it is
+> retained — and *who in the plant needs it, and for what* (think of the plant manager's three
+> expectations). The freezer probes publish once a minute, and the door only when it moves: be
+> patient, or look at the *Packets* tab's history.
 
 ### Exercise 3 — Measure the plant
 
@@ -348,7 +371,7 @@ python -c "import base64; print(len(base64.b64decode('...')))"
 
 Then `check 3`: each key turns ✔ or says what is wrong. Stuck? `hint 3`.
 
-> **Question 5 — Where do the bytes go?** · `See` · *count the bytes (L3, parts 5 and 6)*
+> **Question 4 — Where do the bytes go?** · `See` · *count the bytes (L3, parts 5 and 6)*
 >
 > For the cleanroom temperature message, account for every byte of the packet: fixed header, topic
 > length, topic, payload (the MQTT 3.1.1 specification, section 3.3, describes the `PUBLISH` packet).
@@ -356,7 +379,7 @@ Then `check 3`: each key turns ✔ or says what is wrong. Stuck? `hint 3`.
 > of the payload is the probe's own data, and what is the rest? Propose two ways to send fewer bytes
 > for the same information.
 
-> **Question 6 — From one plant to the group** · `Decide` · *orders of magnitude (L1, part 2)*
+> **◆ Deeper D2 — From one plant to the group** · `Decide` · *orders of magnitude (L1, part 2)*
 >
 > From your measurement, how many bytes and how many messages per day does the plant publish? The
 > group plans to equip its four plants with 5,000 devices of the same mix: estimate the traffic per
@@ -364,7 +387,7 @@ Then `check 3`: each key turns ✔ or says what is wrong. Stuck? `hint 3`.
 > would the group pay each year? Which flow dominates, and why does that matter for a battery-powered
 > device, or for a site connected by a cellular link?
 
-> **Question 7 — What the broker says about itself** · `Research` · *operating a broker* · **◆ Deeper**
+> **◆ Deeper D3 — What the broker says about itself** · `Research` · *operating a broker*
 >
 > Subscribe to `$SYS/#` for 20 seconds. Which version of Mosquitto runs here, how many clients are
 > connected, how many messages has it received? Then subscribe to `#`: why do the `$SYS` topics not
@@ -434,7 +457,7 @@ Exercise 4 — Your virtual sensor
 
 Stuck? `hint 4`.
 
-> **Question 8 — Two clients, one identifier** · `See` · *MQTT sessions (L3, part 5)*
+> **Question 5 — Two clients, one identifier** · `See` · `Research` · *MQTT sessions (L3, part 5)*
 >
 > Start a second copy of your sensor in another terminal, with the same client id, and watch the
 > *Clients* tab for 30 seconds. Describe what happens and explain it with the MQTT specification (look
@@ -474,13 +497,14 @@ plant itself. The plant's structure is usually taken from **ISA-95**, the standa
 manufacturing enterprise as a hierarchy: *enterprise, site, area, work centre, work unit*. Anyone who
 knows the plant can then find any data without a map.
 
-> **Question 9 — What is wrong with the plant's topics?** · `See` · *identity, unit and time travel
+> **Question 6 — What is wrong with the plant's topics?** · `See` · *identity, unit and time travel
 > with the value (L3, part 6)*
 >
-> Using your table from question 4, list at least five problems in the topics and payloads the plant
-> publishes today, and for each one the concrete trouble it causes to an application that subscribes
-> (look closely at the freezer door's topic, and at the energy meters'). Why can nobody subscribe to
-> "everything in the curing area" today?
+> Using your five flows of question 3 — and a look at the compressor's and the CNC router's in the
+> *Topics* tab — list at least five problems in the topics and payloads the plant publishes today, and
+> for each one the concrete trouble it causes to an application that subscribes (look closely at the
+> freezer door's topic, and at the energy meter's). Why can nobody subscribe to "everything in the
+> curing area" today?
 
 ### Exercise 5 — A unified namespace for the plant
 
@@ -518,22 +542,70 @@ Exercise 5 — A unified namespace for the plant
 and before that, messages such as `N2 (every energy meter, whatever the area): misses EM-MAIN` or
 `N1: invalid filter adour/#/curing ('#' must be a whole level, and the last one)`. Stuck? `hint 5`.
 
-> **Question 10 — Your namespace, justified** · `Decide` · *unified namespace, ISA-95*
+> **Question 7 — Your namespace, justified** · `Decide` · *unified namespace, ISA-95*
 >
 > Explain the order of your levels, and where ISA-95 helped. Why should a measured value never be part
 > of a topic? The CNC router is moved to a new trimming cell next year: what happens to your
 > namespace, and what would you do about it? One need of the plant could not be served by your
 > namespace with one filter: invent it.
 
-> **Question 11 — Sparkplug B** · `Research` · *what OPC UA and others add (L3, part 5)* · **◆ Deeper**
+> **◆ Deeper D4 — Sparkplug B** · `Research` · *what OPC UA and others add (L3, part 5)*
 >
 > Industry uses a standard on top of MQTT, Sparkplug B (Eclipse Foundation). Describe its topic
 > structure and its message types. What does it impose that your namespace does not, and which problems
-> of question 9 does it solve? How does it fit with the idea of a unified namespace? Cite the
+> of question 6 does it solve? How does it fit with the idea of a unified namespace? Cite the
 > specification.
+
+### ◆ Exercise 8 — Build the bridge
+
+Your namespace is a design on paper: the devices still publish their own way, and most of them
+cannot be changed. On real sites, a **bridge** closes the gap — a small program next to the broker
+(or a flow in a tool such as Node-RED) that subscribes to each vendor's topics, cleans every message,
+and republishes it in the unified namespace. Write `work/bridge.py`, a client with the id
+`bridge-<name>`, that does it for three devices:
+
+| Device | The plant publishes | Your bridge publishes, on the device's topic from `tree.json` |
+|---|---|---|
+| CR-01 | `hygrolab/CR-01/temperature`: a bare number, in °C | `{"temperature_c": 20.65, "measured_at": "..."}` |
+| CMP-1 | `compressors/CMP1`: JSON, pressure in **psi**, time in seconds since 1970 | `{"pressure_bar": 7.12, "measured_at": "..."}` |
+| FRZ1-T1 and FRZ1-T2 | ChirpStack uplink events: the probe's 6 bytes, in base64 | `{"temperature_c": -17.62, "measured_at": "..."}` |
+
+The rules of the clean namespace:
+
+- values in the site's units, °C and bar (1 psi = 0.0689476 bar), with at least two decimals;
+- `measured_at` in ISO 8601 **with its time zone**, and the device's own time whenever the message
+  carries one;
+- you may add any field that helps (`humidity_pct`, `state`, `battery_pct`…).
+
+The freezer probe's 6 bytes, as its datasheet describes them: byte 0 is the frame type (`0x11`),
+bytes 1–2 the temperature in hundredths of a degree Celsius (signed, big-endian), byte 3 the
+humidity in %, byte 4 the battery in %, byte 5 a status. Which probe is which? The event says it, in
+words.
+
+Run it (`python bridge.py`), leave it a couple of minutes so that both probes speak, then `check 8`.
+The checker compares the last value your bridge published for each device with what the plant
+published just before: it notices a pressure left in psi, a forgotten division, a lost sign, or a
+time without its zone.
+
+**You should see:**
+
+```
+Exercise 8 — Build the bridge  (◆ deeper)
+  ✔ CR-01 -> adour/.../CR-01: temperature_c 20.65 (the plant: 20.65 °C), by bridge-alice
+  ✔ CMP-1 -> adour/.../CMP-1: pressure_bar 7.12 (the plant: 7.12 bar), by bridge-alice
+  ✔ FRZ1-T1 -> adour/.../FRZ1-T1: temperature_c -17.62 (the plant: -17.62 °C), by bridge-alice
+
+deeper: 1/1
+```
+
+Stuck? `hint 8`. In `answers.txt`, say in a few lines what your bridge does, and what it would take
+to bring the eleven other devices in. Labs 3, 6 and 7 come back to this program: it is where
+protocols change identity.
 
 **What to remember.** The namespace is the plant's first interface: design it from the needs of those
 who subscribe, most general level first. ISA-95 gives a structure everyone in industry already knows.
+Devices rarely speak the namespace themselves: something must translate, and that translation is part
+of the architecture.
 
 ---
 
@@ -555,7 +627,7 @@ MQTT answers the first two with two features.
 Together they give the classic status pattern: a device publishes `online` (retained) when it
 connects, and registers `offline` (retained) as its last will.
 
-> **Question 12 — What a newcomer receives** · `See` · *publish/subscribe (L3, part 5)*
+> **Question 8 — What a newcomer receives** · `See` · *publish/subscribe (L3, part 5)*
 >
 > Stop your subscriptions, then start a new one on `#` and look only at what arrives in the first
 > second. Which messages are these, and why do they arrive at once while the cleanroom values do not?
@@ -615,7 +687,7 @@ Exercise 7 — A link that dies in silence
 Your sensor then reconnects by itself through a new connection: look at its status afterwards. Stuck?
 `hint 7`.
 
-> **Question 13 — How long before the broker notices?** · `See` · *session cost (L3, part 5)*
+> **Question 9 — How long before the broker notices?** · `See` · `Research` · *session cost (L3, part 5)*
 >
 > Give the delay you measured between the freeze and the `offline` status, and explain it from the MQTT
 > specification (section 3.1.2.10). Compare three endings: a `DISCONNECT`, Ctrl+C, and a frozen link —
@@ -623,7 +695,7 @@ Your sensor then reconnects by itself through a new connection: look at its stat
 > 60-second keepalive wakes a device's radio: redo the count for your 15-second keepalive, and say what
 > a very short keepalive costs a battery-powered device.
 
-> **Question 14 — Birth, death and goodbye of a gateway** · `Decide` · *who answers when a device
+> **Question 10 — Birth, death and goodbye of a gateway** · `Decide` · *who answers when a device
 > dies (L1, part 3)*
 >
 > After exercise 7, your sensor publishes again, yet its status says `offline`: explain why, and fix
@@ -637,42 +709,47 @@ keepalive, and costs energy.
 
 ---
 
-## H. Your site architecture record
+## H. Your site architecture record (15 min)
 
 The folder `~/iot-labs/record` holds `site-architecture.md`, your team's **site architecture record**.
 It follows you through the course: each lab asks you to write or revise a section, and to log the
 decisions you took. In Lab 10, you defend it. The workstation sees it as `/record`.
 
-**For this lab**, write sections 1 to 4:
+**During this lab**, write sections 3 and 4 — you have just done the work:
+
+3. **Unified namespace** — its structure, two or three examples, and its rules.
+4. **Device status and liveness** — the pattern of question 10, and the keepalive you would choose.
+
+**Before Lab 2**, at home, write sections 1 and 2:
 
 1. **Context and needs** — three uses of the plant's data (the freezer's compliance, the cure record,
    the energy bill), each described with the five lines of L1: family of use, deciding constraint,
    does it tolerate a lost message, whose network, who is still there in ten years.
 2. **Architecture overview** — the plant's data path as it should be, layer by layer (a Mermaid diagram
    or an image). Your drawing of question 2 was the lab; this one is the plant.
-3. **Unified namespace** — its structure, two or three examples, and its rules.
-4. **Device status and liveness** — the pattern of question 14.
 
 Log each decision in the table at the end, the way L3 asks every choice to be written: the
 constraint, the option retained, the option rejected, and the reason.
 
 ## I. Hand in
 
-Once your answers are in `work/answers.md` and your record is up to date, in the workstation:
+Once your answers are in `work/answers.txt` and your record is up to date, in the workstation:
 
 ```bash
 check report
 ```
 
-**You should see:** `written: /work/report-lab1.md — hand this file in.` It contains your answers, your
-files, your site architecture record, and which exercises were confirmed, with the time. Download
-`~/iot-labs/lab1/work/report-lab1.md` from the VM (in VS Code: right-click, *Download*; otherwise
-`scp <login>@<your-vm>:iot-labs/lab1/work/report-lab1.md .` from your laptop) and upload it where your
-teacher asks. Run `check report` again whenever you change something: the file is rewritten each time.
+**You should see:** `written: /work/report-lab1.txt — hand this file in.` It is a plain text file with
+which exercises the checker confirms and when, the hints you opened, your answers, your files
+(`measurements.json`, `tree.json`, `subscriptions.json`, `sensor.py`, `bridge.py`) and your record.
+Download `~/iot-labs/lab1/work/report-lab1.txt` from the VM (in VS Code: right-click, *Download*;
+otherwise `scp <login>@<your-vm>:iot-labs/lab1/work/report-lab1.txt .` from your laptop) and upload it
+where your teacher asks. Run `check report` again whenever you change something: the file is
+rewritten each time. Sections 1 and 2 of the record are handed in with Lab 2's report.
 
 ## J. Going further
 
-Finished early? Pick one.
+Finished early? After the ◆ items, pick one.
 
 - **Where does the energy go?** Watch the main meter (`modbus2mqtt/meter_main/reg/3059`) and the
   autoclave's (`modbus2mqtt/meter_ac1/reg/3059`), the compressor's state and the autoclave's phase. What
@@ -680,7 +757,7 @@ Finished early? Pick one.
   uses compressed air? Keep your notes: Lab 7 and Lab 8 come back to it.
 - **See the bytes yourself.** On the VM, as root, install `tcpdump` if it is missing
   (`apt install tcpdump`), capture the broker's traffic with `tcpdump -i any -A port 1883`, and find
-  the cleanroom packet you took apart in question 5. What does this tell you about security?
+  the cleanroom packet you took apart in question 4. What does this tell you about security?
 - **QoS preview.** Publish the same message with `-q 0`, `-q 1` and `-q 2` and count, in the viewer,
   the packets each one needs. Lab 2 is about why.
 
@@ -699,9 +776,28 @@ Finished early? Pick one.
 | exercise 4 finds no message | wrong client id or topic | `sensor-<name>` and `lab/sensors/<name>/env` |
 | exercise 5: `is not valid JSON` | a missing comma or quote | the message gives the line and column |
 | exercise 6: no abrupt death | you stopped the sensor with `disconnect()` | stop it with Ctrl+C |
-| exercise 7: the broker has not given up yet | the broker waits longer than the keepalive | wait: that is question 13 |
+| exercise 7: the broker has not given up yet | the broker waits longer than the keepalive | wait: that is question 9 |
+| exercise 8: `no JSON message of yours ... on <topic>` | the bridge publishes elsewhere, or not yet | publish on the topics of your `tree.json`, and wait a minute for the probes |
+| your bridge receives nothing | it subscribed before being connected | subscribe in `on_connect` |
 | the autoclave says `IDLE`, the CNC says `OFF` | it is night or the weekend at the plant | normal: note the time; the cleanroom, the freezer and the utilities never sleep |
 | everything is broken | — | `docker compose down`, then `docker compose up -d`: your files in `work/` are kept |
+
+## L. Python, JSON and the terminal in ten lines
+
+```text
+Terminal  cd ~/iot-labs/lab1 · ls · cat file      move, list, print a file;  ↑ recalls a command
+          Ctrl+C stops the running program;  nano file edits (Ctrl+O save, Ctrl+X quit) — or VS Code
+JSON      {"temperature_c": 20.4, "tags": ["a", "b"]}   double quotes only, no comma after the last item
+          python -m json.tool tree.json                  checks a JSON file, says where it is broken
+Python    import json;  d = json.loads(text);  text = json.dumps(d)       text <-> dictionary
+          d["pressure_psi"] · float("20.65") · round(x, 2) · f"lab/sensors/{name}/env"
+          from datetime import datetime, timezone
+          datetime.now(timezone.utc).isoformat(timespec="seconds")      now, ISO 8601, in UTC
+          datetime.fromtimestamp(1790000000, timezone.utc).isoformat()  seconds since 1970 -> ISO
+          import base64, struct;  raw = base64.b64decode(s);  struct.unpack(">BhBBB", raw)  bytes -> numbers
+```
+
+In `struct`, `>` means big-endian, `B` one unsigned byte, `h` two bytes read as a signed number.
 
 ---
 

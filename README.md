@@ -114,11 +114,13 @@ flowchart LR
 - **The subject** is the lab's `README.md`.
 - **Exercises** are checked by a program: type `check` in the workstation, each exercise turns ✔ or ✘
   with the reason.
-- **Questions** are answered in `work/answers.md`, as you go.
+- **Questions** are answered in `work/answers.txt`, as you go: it holds a place for each one.
 - **Stuck?** `hint <exercise>` gives the next hint, one step at a time. The last one is close to the
   answer: try the others first.
-- **Hand in** the file that `check report` writes: your answers, your files, your record, and which
-  exercises were confirmed, with the time.
+- **Hand in** the plain text file that `check report` writes: your answers, your files, your record,
+  and which exercises were confirmed, with the time.
+- **Pace yourself.** Each lab has a core that fits in three hours and ◆ items for the end; the subject
+  says where you should be at the break.
 
 ## Getting a lab onto your VM
 
