@@ -11,25 +11,26 @@ of almost five hours, a freezer door opened a dozen times a day, a compressor th
 
 ## The course map
 
-Every lab works on one part of the same chain. Keep this map in mind: whatever the lab, you can always
+Every lab works on one part of the same chain — the chain of the lectures, from the six blocks of a
+device to the tiers where each function runs. Keep this map in mind: whatever the lab, you can always
 say where you are.
 
 ```mermaid
 flowchart LR
-    subgraph field["Devices and field"]
-        D["Sensors, machines, controllers"]
+    subgraph dev["Device"]
+        D["sense · compute · power<br/>sensors, machines, controllers"]
     end
-    subgraph net["Networks"]
-        N["Wired fieldbus, LoRaWAN,<br/>low-power mesh"]
+    subgraph net["Network"]
+        N["connect · backhaul<br/>fieldbus, LoRaWAN, low-power mesh"]
     end
-    subgraph edge["Edge"]
-        E["Gateways, local rules,<br/>store and forward"]
+    subgraph edge["Gateway and edge"]
+        E["where protocols change identity<br/>local rules, store and forward"]
     end
-    subgraph plat["Platform"]
-        P["Broker, time series,<br/>device management"]
+    subgraph plat["Cloud / platform"]
+        P["broker, time series,<br/>device management"]
     end
-    subgraph app["Applications"]
-        A["Dashboards, alerts,<br/>quality records"]
+    subgraph use["Use"]
+        A["dashboards, alerts,<br/>quality records"]
     end
     D --> N --> E --> P --> A
 ```
@@ -46,6 +47,20 @@ flowchart LR
 | 8 | *See the plant* — time series, dashboards, KPIs | platform ↔ applications | InfluxDB, Grafana, OEE | coming |
 | 9 | *Lock the doors* — who may publish what, and who can listen | every layer | TLS, authentication, ACL, IEC 62443 | coming |
 | 10 | *Defend your architecture* — a new need, your record, your choices | all | — | coming |
+
+### The labs and the lectures
+
+The labs apply the lectures of *IoT Systems Design*; each lab says which parts it uses.
+
+| Lecture | Title | Used in labs |
+|---|---|---|
+| **L1** | What a connected system is made of — the six blocks, the five lines, who answers | 1, 5, 10 |
+| **L2** | The radio link — link budget, range and rate, technologies | 4, 5 |
+| **L3** | Communication protocols and system architectures — layers, sharing, addressing, transport, application, data, placement, edge, engineering models, method | every lab |
+
+The labs keep the lectures' habits. Every choice is written the same way: **the constraint, the
+option retained, the option rejected, and the reason.** Before a protocol, the interaction pattern:
+request/response, publish/subscribe or observe. And bytes are counted before anything is chosen.
 
 ### Which protocol for what
 

@@ -1,8 +1,10 @@
 # Lab 1 — Map the plant: IoT architecture and first MQTT messages
 
 **Duration:** 3 hours, on your own. **You hand in:** `work/report-lab1.md`, written by `check report`.
-**Where this lab sits:** the whole chain, from device to application, seen through its messages
+**Where this lab sits:** the whole chain, from device to use, seen through its messages
 (see the [course map](../README.md#the-course-map)). **Protocol:** MQTT.
+**From the lectures:** L1 (the six blocks, the five lines), L3 part 1 (reference models) and part 5
+(publish/subscribe, MQTT).
 
 You join Adour Composites as IoT engineers. In this first lab you map how the plant's data travel
 today, watch every MQTT packet it exchanges, become a device yourself, design the plant's **unified
@@ -40,7 +42,8 @@ last will.
 | 4 — A unified namespace | 35 min | 5 | 9–11 |
 | 5 — Retained messages and last will | 30 min | 6, 7 | 12–14 |
 
-**How to read the questions.** Each question says what it asks of you, and which notion it uses:
+**How to read the questions.** Each question says what it asks of you, and which notion of the
+lectures it uses (L1, L2, L3 and the part):
 
 | Tag | You are asked to |
 |---|---|
@@ -203,12 +206,15 @@ technologies and its own constraints. Knowing the layers tells you where a probl
 responsible for it. The [course map](../README.md#the-course-map) places every lab of this course on
 such a chain.
 
-> **Question 1 — The layers of an IoT system** · `Research` · *reference architectures*
+> **Question 1 — The plant through the course's lenses** · `Research` · *six blocks (L1, part 2),
+> reference models (L3, part 1)*
 >
-> Look up a reference architecture of IoT systems (the layered models of the ITU-T or the IEEE, the
-> ISA-95 automation pyramid, the reference architectures of the major cloud providers…). Name the
-> layers from the sensor to the application, and give for each its role and two examples of
-> technologies. Where does the ISA-95 pyramid differ? Cite your sources.
+> Take three devices of the plant: a freezer probe, the autoclave, the main energy meter. For each,
+> fill the six blocks of L1 — sense, compute, power, connect, backhaul, use — as far as the tables of
+> section A let you, and say what you had to assume. Then look up one layered reference model of IoT
+> systems (ITU-T Y.2060, IEEE 2413, or a cloud provider's) and the ISA-95 automation pyramid. Where do
+> they cut the chain differently from the six blocks, and why does industry keep ISA-95? Cite your
+> sources.
 
 ### Exercise 1 — The lab is running
 
@@ -242,19 +248,22 @@ docker compose logs broker | tail -20
 In the broker's log, look at the address each client connects from, and compare it with the addresses
 in the network.
 
-> **Question 2 — The architecture of this lab** · `See` · *layers, components, flows*
+> **Question 2 — The architecture of this lab** · `See` · *tiers and placement (L3, part 7)*
 >
 > Draw the architecture of the lab: every container, the ports, the protocols, and the direction in
 > which data flow. Place each container in one of the layers of question 1. One component would not
 > exist on a real site: which one, why is it here, and what would play its role in the plant? Why does
 > the broker's log show the same address for every client?
 
-> **Question 3 — Why not HTTP everywhere?** · `Research` · *IoT application protocols*
+> **Question 3 — Why not HTTPS for the cleanroom?** · `Decide` · *the cost of a short exchange
+> (L3, part 4), interaction patterns (L3, part 5)*
 >
-> Many devices could post their readings to a web server over HTTP. Give three reasons why IoT
-> deployments often do not, with orders of magnitude where you can (bytes per message, energy,
-> connections). Name two protocols designed for these constraints and say in one sentence what problem
-> each one solves. You will meet both in this course.
+> The cleanroom's gateway could POST each reading to a web server over HTTPS instead of publishing it
+> over MQTT. Using what L3 showed about sending a few bytes over two stacks, estimate for one reading
+> the bytes and the round trips of each option — with a new connection each time, then with a
+> connection kept open. Which interaction pattern does each option impose on the applications that
+> want the data? Which protocol would L3 propose if the sensor slept between readings, and what would
+> it change?
 
 **What to remember.** An IoT system is a chain of layers, each with its own constraints. MQTT sits
 between the devices and the applications, and decouples them. Where a component sits tells you what it
@@ -339,7 +348,7 @@ python -c "import base64; print(len(base64.b64decode('...')))"
 
 Then `check 3`: each key turns ✔ or says what is wrong. Stuck? `hint 3`.
 
-> **Question 5 — Where do the bytes go?** · `See` · *MQTT packet format*
+> **Question 5 — Where do the bytes go?** · `See` · *count the bytes (L3, parts 5 and 6)*
 >
 > For the cleanroom temperature message, account for every byte of the packet: fixed header, topic
 > length, topic, payload (the MQTT 3.1.1 specification, section 3.3, describes the `PUBLISH` packet).
@@ -347,14 +356,15 @@ Then `check 3`: each key turns ✔ or says what is wrong. Stuck? `hint 3`.
 > of the payload is the probe's own data, and what is the rest? Propose two ways to send fewer bytes
 > for the same information.
 
-> **Question 6 — From one plant to the group** · `Decide` · *traffic, scaling*
+> **Question 6 — From one plant to the group** · `Decide` · *orders of magnitude (L1, part 2)*
 >
-> From your measurement, how many bytes per day does the plant publish? The group plans to equip its
-> four plants with 5,000 devices of the same mix: estimate the traffic per second and per day. Which
-> flow dominates, and why does that matter for a battery-powered device, or for a site connected by a
-> cellular link?
+> From your measurement, how many bytes and how many messages per day does the plant publish? The
+> group plans to equip its four plants with 5,000 devices of the same mix: estimate the traffic per
+> second and per day, and the messages per year. A cloud platform bills 1 € per million messages: what
+> would the group pay each year? Which flow dominates, and why does that matter for a battery-powered
+> device, or for a site connected by a cellular link?
 
-> **Question 7 — What the broker says about itself** · `Research` · *broker monitoring* · **◆ Deeper**
+> **Question 7 — What the broker says about itself** · `Research` · *operating a broker* · **◆ Deeper**
 >
 > Subscribe to `$SYS/#` for 20 seconds. Which version of Mosquitto runs here, how many clients are
 > connected, how many messages has it received? Then subscribe to `#`: why do the `$SYS` topics not
@@ -424,7 +434,7 @@ Exercise 4 — Your virtual sensor
 
 Stuck? `hint 4`.
 
-> **Question 8 — Two clients, one identifier** · `See` · *client identity, sessions*
+> **Question 8 — Two clients, one identifier** · `See` · *MQTT sessions (L3, part 5)*
 >
 > Start a second copy of your sensor in another terminal, with the same client id, and watch the
 > *Clients* tab for 30 seconds. Describe what happens and explain it with the MQTT specification (look
@@ -464,7 +474,8 @@ plant itself. The plant's structure is usually taken from **ISA-95**, the standa
 manufacturing enterprise as a hierarchy: *enterprise, site, area, work centre, work unit*. Anyone who
 knows the plant can then find any data without a map.
 
-> **Question 9 — What is wrong with the plant's topics?** · `See` · *topic design*
+> **Question 9 — What is wrong with the plant's topics?** · `See` · *identity, unit and time travel
+> with the value (L3, part 6)*
 >
 > Using your table from question 4, list at least five problems in the topics and payloads the plant
 > publishes today, and for each one the concrete trouble it causes to an application that subscribes
@@ -514,7 +525,7 @@ and before that, messages such as `N2 (every energy meter, whatever the area): m
 > namespace, and what would you do about it? One need of the plant could not be served by your
 > namespace with one filter: invent it.
 
-> **Question 11 — Sparkplug B** · `Research` · *industrial MQTT* · **◆ Deeper**
+> **Question 11 — Sparkplug B** · `Research` · *what OPC UA and others add (L3, part 5)* · **◆ Deeper**
 >
 > Industry uses a standard on top of MQTT, Sparkplug B (Eclipse Foundation). Describe its topic
 > structure and its message types. What does it impose that your namespace does not, and which problems
@@ -544,7 +555,7 @@ MQTT answers the first two with two features.
 Together they give the classic status pattern: a device publishes `online` (retained) when it
 connects, and registers `offline` (retained) as its last will.
 
-> **Question 12 — What a newcomer receives** · `See` · *retained messages*
+> **Question 12 — What a newcomer receives** · `See` · *publish/subscribe (L3, part 5)*
 >
 > Stop your subscriptions, then start a new one on `#` and look only at what arrives in the first
 > second. Which messages are these, and why do they arrive at once while the cleanroom values do not?
@@ -604,14 +615,16 @@ Exercise 7 — A link that dies in silence
 Your sensor then reconnects by itself through a new connection: look at its status afterwards. Stuck?
 `hint 7`.
 
-> **Question 13 — How long before the broker notices?** · `See` · *keepalive*
+> **Question 13 — How long before the broker notices?** · `See` · *session cost (L3, part 5)*
 >
 > Give the delay you measured between the freeze and the `offline` status, and explain it from the MQTT
 > specification (section 3.1.2.10). Compare three endings: a `DISCONNECT`, Ctrl+C, and a frozen link —
-> when is the will published, if at all? What is the price of a very short keepalive for a
-> battery-powered device?
+> when is the will published, if at all? L3 counted, over one hour, how often an MQTT session with a
+> 60-second keepalive wakes a device's radio: redo the count for your 15-second keepalive, and say what
+> a very short keepalive costs a battery-powered device.
 
-> **Question 14 — Birth, death and goodbye of a gateway** · `Decide` · *device status pattern*
+> **Question 14 — Birth, death and goodbye of a gateway** · `Decide` · *who answers when a device
+> dies (L1, part 3)*
 >
 > After exercise 7, your sensor publishes again, yet its status says `offline`: explain why, and fix
 > `sensor.py`. Then design the status messages of the cleanroom's gateway: the message it publishes when
@@ -632,13 +645,16 @@ decisions you took. In Lab 10, you defend it. The workstation sees it as `/recor
 
 **For this lab**, write sections 1 to 4:
 
-1. **Context and needs** — three to five needs of the plant, in the words of those who have them.
+1. **Context and needs** — three uses of the plant's data (the freezer's compliance, the cure record,
+   the energy bill), each described with the five lines of L1: family of use, deciding constraint,
+   does it tolerate a lost message, whose network, who is still there in ten years.
 2. **Architecture overview** — the plant's data path as it should be, layer by layer (a Mermaid diagram
    or an image). Your drawing of question 2 was the lab; this one is the plant.
 3. **Unified namespace** — its structure, two or three examples, and its rules.
 4. **Device status and liveness** — the pattern of question 14.
 
-Log each decision in the table at the end: what you chose, what else you considered, why.
+Log each decision in the table at the end, the way L3 asks every choice to be written: the
+constraint, the option retained, the option rejected, and the reason.
 
 ## I. Hand in
 

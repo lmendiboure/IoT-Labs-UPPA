@@ -7,12 +7,20 @@ the decisions you took to the log at the end. In Lab 10, you defend it: it shoul
 understand how the plant's data travel, and why they travel that way.
 
 Keep it short and precise: a diagram, a table, a sentence per decision. A section written in Lab 1
-may be wrong by Lab 5 — revise it, and say so in the log.
+may be wrong by Lab 5 — revise it, and say so in the log. Every decision is written the way the
+lectures ask: the constraint, the option retained, the option rejected, and the reason.
 
 ## 1. Context and needs *(Lab 1)*
 
-Who needs which data, and for what? Three to five needs of the plant, in the words of the people
-who have them.
+Three uses of the plant's data, each in the five lines of L1:
+
+| | Freezer compliance | Cure record | Energy bill |
+|---|---|---|---|
+| Family of use | | | |
+| Deciding constraint | | | |
+| Tolerates a lost message? | | | |
+| Whose network | | | |
+| Who is still there in ten years | | | |
 
 ## 2. Architecture overview *(Lab 1, revised in every lab)*
 
@@ -45,6 +53,6 @@ How the site knows that a device is alive: topics, payloads, QoS, retain flags, 
 
 ## Decision log
 
-| Lab | Decision | Alternatives considered | Why |
-|---|---|---|---|
-| 1 | | | |
+| Lab | Constraint | Option retained | Option rejected | Reason |
+|---|---|---|---|---|
+| 1 | | | | |

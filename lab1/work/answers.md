@@ -5,11 +5,11 @@ Team: (your names)
 Write each answer below its question. Short and precise beats long: a table, a figure with its unit,
 the source of what you looked up. Note the day and time of your observations: the plant has a rhythm.
 
-## Q1 — The layers of an IoT system
+## Q1 — The plant through the course's lenses
 
 ## Q2 — The architecture of this lab
 
-## Q3 — Why not HTTP everywhere?
+## Q3 — Why not HTTPS for the cleanroom?
 
 ## Q4 — Every flow of the plant
 
