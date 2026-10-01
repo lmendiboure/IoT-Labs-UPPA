@@ -480,7 +480,7 @@ def chirpstack():
         for probe, (eui, name) in PROBES.items():
             t = every(60, 7 if probe == "T1" else 37)
             fcnt[probe] += 1
-            if r.random() < 0.03:                         # lost on the radio: unconfirmed, never resent
+            if r.random() < 0.08:                         # lost on the radio (metal walls): never resent
                 continue
             heard = r.sample(GATEWAYS, r.choice([1, 1, 2]))
             batt = 87 if probe == "T1" else 64

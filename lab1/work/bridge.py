@@ -38,7 +38,8 @@ def compressor(d):
 def probe(event):
     """A ChirpStack uplink event, already parsed from JSON -> the clean message of the probe."""
     # TODO: temperature_c from the frame in event["data"] (use decode()),
-    #       measured_at from the event's own time. Add any field you find useful.
+    #       measured_at: the probe has no clock — the best time is the network server's reception
+    #       time, event["time"]. Add any field you find useful (fCnt, battery...).
     return {}
 
 

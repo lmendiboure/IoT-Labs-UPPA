@@ -27,8 +27,8 @@ dozen times a day, devices that crash.
 ## Start
 
 ```bash
-git clone <this repository's URL> ~/iot-labs      # once; later: cd ~/iot-labs && git pull
-cd ~/iot-labs/lab1 && docker compose up -d
+git clone <this repository's URL> ~/iot-labs      # once; for a new lab later: cd ~/iot-labs && git pull
+cd ~/iot-labs/lab1 && docker compose up -d --build
 ```
 
 Then open the lab's page ([Lab 1](lab1/)): it tells you everything else. If you have never used SSH,

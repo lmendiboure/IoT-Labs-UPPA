@@ -31,12 +31,12 @@ OK, NO, INFO = "✔", "✘", "·"
 
 TITLES = {
     1: "The lab is running",
-    2: "A message by hand, a subscription by hand",
+    2: "A subscription and a message by hand",
     3: "Take a message apart",
     4: "Your virtual sensor",
-    5: "A unified namespace for the plant",
+    5: "A namespace for the plant",
     6: "Bridge two devices into your namespace",
-    7: "A retained status and a last will",
+    7: "A status and a last will",
     8: "A link that dies in silence",
 }
 CORE, DEEPER = [1, 2, 3, 4, 5, 6, 7, 8], []
@@ -44,7 +44,9 @@ CORE, DEEPER = [1, 2, 3, 4, 5, 6, 7, 8], []
 
 # ---------------------------------------------------------------- helpers
 def api(path):
-    with urllib.request.urlopen(VIEWER + path, timeout=5) as r:
+    if path == "/api/packets":
+        path += "?limit=1000000"                 # the whole history, not the viewer's last 1000
+    with urllib.request.urlopen(VIEWER + path, timeout=10) as r:
         return json.loads(r.read())
 
 
@@ -515,17 +517,21 @@ def banner(title):
 
 def report():
     import textwrap
-    s = state()
-    lines = ["LAB 1 — MAP THE PLANT — REPORT",
+    lines = ["LAB 1 — HOW DO OUR DATA TRAVEL TODAY? — REPORT",
              f"Written by `check report` on {datetime.now(PLANT_TZ):%Y-%m-%d at %H:%M} (plant time). "
              "Hand this file in as it is."]
-    lines += banner("EXERCISES (as the checker sees them now)")
+    lines += banner("EXERCISES")
+    lines.append("An exercise counts as passed from the first time `check` confirmed it; your programs")
+    lines.append("do not need to be running when you write this report.")
+    lines.append("")
     for n in EXERCISES:
         ok, _, why = run(n, quiet=True)
+        s = state()
         name = f"{n}. {TITLES[n]}"
-        first = f"first passed at {hhmm(s[str(n)])}" if str(n) in s else "never passed"
-        lines.append(f"{name:<48} {'passed' if ok else 'NOT YET':<8} {first}")
-        if not ok:
+        if str(n) in s:
+            lines.append(f"{name:<48} passed at {hhmm(s[str(n)])}")
+        else:
+            lines.append(f"{name:<48} NOT PASSED")
             lines += textwrap.wrap(why, 72, initial_indent="    ", subsequent_indent="    ")
     try:
         hints = json.load(open(os.path.join(WORK, ".hints.json")))
@@ -538,10 +544,6 @@ def report():
         lines += banner(f"work/{name}")
         lines += [open(path, encoding="utf-8", errors="replace").read().rstrip()
                   if os.path.exists(path) else "(no such file)"]
-    path = os.path.join(RECORD, "site-architecture.md")
-    lines += banner("record/site-architecture.md")
-    lines += [open(path, encoding="utf-8", errors="replace").read().rstrip()
-              if os.path.exists(path) else "(no such file)"]
     out = os.path.join(WORK, "report-lab1.txt")
     with open(out, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")

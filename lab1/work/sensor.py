@@ -18,7 +18,7 @@ PORT = int(os.getenv("MQTT_PORT", "1884"))
 NAME = "alice"                                  # TODO (exercise 4): your name, in lower case
 TOPIC = f"lab/sensors/{NAME}/env"
 STATUS = f"lab/sensors/{NAME}/status"           # used from exercise 7
-PERIOD_S = 5                                    # one message every 2 to 10 seconds
+PERIOD_S = 5                                    # seconds between two messages (2 to 10)
 KEEPALIVE_S = 60                                # exercise 8 asks for 15
 
 

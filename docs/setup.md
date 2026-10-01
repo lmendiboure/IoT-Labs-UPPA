@@ -18,10 +18,12 @@ On the VM:
 
 ```bash
 cd ~/iot-labs/lab1
-docker compose up -d                               # starts the lab (the first time takes a few minutes)
+docker compose up -d --build                       # starts the lab; the first time takes a few minutes
 docker compose ps --services --status running      # what is running
 docker compose exec workstation bash               # opens a terminal in your workstation
 ```
+
+After `git pull` (a new lab, or a fix), start again with `--build`, so that the lab's tools are rebuilt.
 
 You work **in the workstation**, a container with Python, the MQTT tools, `check` and `hint`. Your
 prompt there is `root@workstation:/work#`. Open two such terminals: one to listen, one to act.
@@ -33,10 +35,10 @@ with VS Code, run them in the workstation. The record is `~/iot-labs/record`, se
 
 | Tool | What it does |
 |---|---|
-| the **viewer**, http://localhost:8080 | every MQTT packet of the lab, live. *Packets*: each packet, its type, topic, payload, sizes (click a payload to see it whole); the top line counts the last minute. *Topics*: per topic, over 5 minutes. *Clients*: every connection, and how it ended |
+| the **viewer**, http://localhost:8080 on your laptop (`relay:8080` inside the lab) | every MQTT packet of the lab, live. *Packets*: each packet, its direction (↑ to the broker, ↓ from it), type, topic, payload, sizes; click a payload to see it whole; the **filter** box keeps only the packets that mention what you type; `PINGREQ`/`PINGRESP` are hidden unless you untick the box; the top line counts the last minute. *Topics*: per topic, over 5 minutes. *Clients*: every connection, its settings, how it ended, and a **Freeze** button |
 | `check` | tells whether each exercise works, and if not, why. `check 3` checks exercise 3 only |
 | `hint 3` | the next hint for exercise 3; run it again for the next one. The last hint is close to the answer |
-| `check report` | writes the file you hand in, `work/report-lab1.txt` |
+| `check report` | writes the file you hand in, `work/report-lab1.txt`. An exercise counts from the first time `check` confirmed it |
 
 ## Python, JSON and the terminal in ten lines
 

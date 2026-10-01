@@ -53,13 +53,15 @@ HINTS = {
         "            'measured_at': datetime.now(timezone.utc).isoformat(timespec='seconds')}",
     ],
     5: [
-        "Follow the ISA-95 hierarchy, from the most general to the most specific: enterprise, site, area, "
-        "cell (work unit), then the device. A subscription can then pick any level with + and cut the rest with #.",
-        "Every need should take one filter. 'Everything in the curing area' is easy only if the area is at the same "
-        "level in every topic. 'Every energy meter' is easy only if the class of device is a level of its own. "
-        "The weather station belongs to the site, not to an area: give it values that no need will catch by mistake.",
-        "One tree that works: <enterprise>/<site>/<area>/<cell>/<class>/<device>, in lower case, "
-        "for example adour/tarnos/curing/autoclave-1/machine/AC-1. Then N1 is adour/tarnos/curing/#.",
+        "Start from the needs, not from the devices: N1, N3 and N5 group by place (area, cell), N2 and N4 by "
+        "kind of device. A filter can cut the end of a topic with #, and skip one level with +. So: which levels "
+        "must exist, and in which order, for each need to be one filter?",
+        "Places from the most general to the most specific, as ISA-95 orders the plant: enterprise, site, area, "
+        "cell. 'Every energy meter' is one filter only if the class of device is a level of its own, at the same "
+        "depth in every topic. The weather station has no area: give it a value that no need will catch by mistake.",
+        "One tree that works: <enterprise>/<site>/<area>/<cell>/<class>/<device>, in lower case except the "
+        "device id, for example adour/tarnos/curing/autoclave-1/machine/AC-1. Then N1 is adour/tarnos/curing/# "
+        "and N2 is adour/tarnos/+/+/energy-meter/+.",
     ],
     7: [
         "Two separate things: a retained message on lab/sensors/<name>/status saying online, "

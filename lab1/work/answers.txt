@@ -1,49 +1,38 @@
-LAB 1 — MAP THE PLANT — ANSWERS
-Team: (your names)
+LAB 1 — HOW DO OUR DATA TRAVEL TODAY? — ANSWERS
+Name: (your name)
 Observations made on (day, time):
 
 Plain text. Short and precise: a figure with its unit, a filled table, a reason in one sentence.
 Replace the ___ and fill the tables; add lines where you need them.
 
 Predictions — written BEFORE each part, never corrected afterwards; they are not graded on being right.
-  Part 2, bytes reaching the broker for one freezer reading:          lost reading recovered? yes / no
-  Part 4, subscriptions an energy dashboard needs today: ___   should need: ___
+  Part 2, bytes reaching the broker for one freezer reading: ___   a lost reading comes back? yes / no
+  Part 4, subscriptions for everything about the autoclave, today: ___   with a good namespace: ___
   Part 5, delay before an application knows the cleanroom gateway died: ___   how it would know:
 
 == Q1. Put names on the architecture ==========================================================
 
-Device             | link to the next element | publishes on MQTT for it | client id | topic
--------------------+--------------------------+--------------------------+-----------+---------------
-freezer probe T1   |                          |                          |           |
-cleanroom CR-01    |                          |                          |           |
-main energy meter  |                          |                          |           |
-autoclave          |                          |                          |           |
-CNC router         |                          |                          |           |
+Device             | link to the next element  | client id publishing it | topic
+-------------------+---------------------------+-------------------------+------------------------
+freezer probe T1   |                           |                         |
+cleanroom CR-01    |                           |                         |
+main energy meter  |                           |                         |
+autoclave          |                           |                         |
+CNC router         |                           |                         |
 
 (a) Why each of the four does not publish MQTT itself:
   -
   -
   -
   -
-(b) What goes wrong if a translator fails, that would not if the device published directly:
+(b) What goes wrong if a translator fails, that would not if the device published directly
+    (and the real case you saw in the Clients tab):
 
-(c) The freezer probe in six blocks:
-  sense:            compute:            power:
-  connect:          backhaul:           use:
-
-== Q2. The lab is not the plant ===============================================================
-
-Address in the broker's log: ___, owned by the container ___. Why the same for every client:
-
-What a real broker could no longer do properly behind such a relay:
-
-What would see every packet in the real plant:
-
-== Q3. Where do the bytes go? =================================================================
+== Q2. Where do the bytes go? =================================================================
 
 (a) fixed header ___ + topic length ___ + topic ___ + packet identifier ___ + payload ___ = ___ bytes
     share of the measured value: ___ %
-(b) probe's data in the event: ___ of ___ bytes = ___ %
+(b) the probe's 6 bytes in an event of ___ bytes = ___ %
     other information in the event      | who could use it
     ------------------------------------+-----------------------------------
                                         |
@@ -51,29 +40,19 @@ What would see every packet in the real plant:
                                         |
 (c) where the difference is added, and why it is acceptable there:
 
-(d) two ways to deliver the same information in fewer bytes, and where each acts:
-  1.
-  2.
+== Q3. Lost frames ============================================================================
 
-== Q4. Lost frames ============================================================================
-
-(a) fCnt | time | gateways that heard it
-    -----+------+-----------------------
-         |      |
-         |      |
-         |      |
-    What fCnt detects that timestamps do not:
-(b) fCnt 4120 then 4123:
+(a) probe ___ : fCnt ___ is followed by fCnt ___ , around ___ (time) — missing:
+    What fCnt detects that the times alone do not:
+(b) can the plant get them back? why not:
 (c) the rule, and what to do when it fires:
-(d) why two gateways:
 
-== Q5. Two clients, one identifier ============================================================
+== Q4. Two clients, one identifier ============================================================
 
 (a) what happens (connections in 30 s: ___), and why:
-(b) in the plant; how ids are made unique:
-(c) id sent by mosquitto_pub: ___ ; what --help says: ___ ; who chose the id in the end:
+(b) in the plant; why it is hard to diagnose; how ids are made unique:
 
-== Q6. What is wrong with the plant's topics? =================================================
+== Q5. What is wrong with the plant's topics? =================================================
 
    problem                    | seen in (topic or payload)     | what it breaks for a subscriber
    ---------------------------+--------------------------------+---------------------------------
@@ -81,26 +60,25 @@ What would see every packet in the real plant:
 2.                            |                                |
 3.                            |                                |
 4.                            |                                |
-5.                            |                                |
 
 Why "everything in the curing area" is impossible today:
 
-== Q7. Your namespace under stress ============================================================
+== Q6. Your namespace under stress ============================================================
 
 (a) order of the levels, and what ISA-95 gave:
-(b) filters for every temperature on the site:
-(c) CNC-1 moves to trimming-2 — needs unchanged: ___ ; who loses it, and the proposal:
+(b) filters for every temperature on the site; what you would change, at what cost:
+(c) the CNC router moves to trimming-2 — who loses it, and your proposal:
 (d) the bridge stops for ten minutes:
 
-== Q8. What a newcomer receives ===============================================================
+== Q7. What a newcomer receives ===============================================================
 
-(a)
-(b)
-(c) command:
+(a) what arrives at once, and why:
+(b) the device: ___ ; its retained messages that may lie while it is down:
+    what an application should check before trusting a retained value:
 
-== Q9. How long before the broker notices? ====================================================
+== Q8. How long before the broker notices? ====================================================
 
-(a) frozen at ___, offline at ___, measured ___ s; predicted ___ s; why shorter:
+(a) frozen at ___, offline at ___, measured ___ s; predicted ___ s; why they can differ:
 (b) ending          | will published? when?
     ----------------+------------------------
     DISCONNECT      |
@@ -112,20 +90,19 @@ Why "everything in the curing area" is impossible today:
     60 s      |                   |
 (d) keepalive for the cleanroom gateway, and why; what tells the plant a probe is dead:
 
-== Q10. Birth, death and goodbye of a gateway =================================================
+== Q9. Birth, death and goodbye of a gateway ==================================================
 
 (a) why offline, and the fix:
-(b) moment            | topic | payload | QoS | retained
-    ------------------+-------+---------+-----+---------
-    birth (when?)     |       |         |     |
-    last will         |       |         |     |
-    planned shutdown  |       |         |     |
+(b) moment            | topic | payload | retained?
+    ------------------+-------+---------+----------
+    birth (when?)     |       |         |
+    last will         |       |         |
+    planned shutdown  |       |         |
     the order of the last step, and why:
 
+== Q10. What you tell Maialen (10 lines at most) ===============================================
 
-== Q11. What you tell Maialen (10 lines at most) ===============================================
-
-Can the plant prove every hour of the freezer and every cure cycle today?
+Can the plant prove every hour of the freezer today?
 
 What prevents it (each point: what you measured or observed):
 
@@ -134,15 +111,19 @@ The three changes you recommend first, in order:
   2.
   3.
 
+What this lab does not yet tell you about the cure records:
+
 
 ================================== ◆ DEEPER (optional) =======================================
 
-== D1. Why not HTTPS for the cleanroom? ==
+== D1. The lab is not the plant ==
 
-== D2. From one plant to the group ==
+== D2. Why not HTTPS for the cleanroom? ==
 
-== D3. What the broker says about itself ==
+== D3. From one plant to the group ==
 
-== D4. Sparkplug B ==
+== D4. What the broker says about itself ==
 
-== D5. The whole plant ==
+== D5. Sparkplug B ==
+
+== D6. The whole plant ==

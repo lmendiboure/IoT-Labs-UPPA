@@ -27,11 +27,11 @@ Three uses of the plant's data, each in the five lines of L1:
 A diagram of the site's data path, layer by layer: devices, networks, gateways, broker, platform,
 applications. A Mermaid diagram (GitHub draws it) or an image in this folder.
 
-## 3. Unified namespace *(Lab 1, in the lab)*
+## 3. Unified namespace *(Lab 1, at home before Lab 2)*
 
 The structure of the plant's topic tree, with two or three examples, and the rules that go with it.
 
-## 4. Device status and liveness *(Lab 1, in the lab)*
+## 4. Device status and liveness *(Lab 1, at home before Lab 2)*
 
 How the site knows that a device is alive: topics, payloads, QoS, retain flags, keepalive.
 
