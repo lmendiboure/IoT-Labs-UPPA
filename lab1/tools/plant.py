@@ -12,7 +12,7 @@ compressor keeps running at night, because the air network leaks.
   cnc1-adapter    CNC router adapter: state, spindle load, part counter; crashes now and then
   cmp1            screw compressor controller (a US unit: pressure in psi)
   modbus2mqtt     a Modbus-to-MQTT gateway reading two energy meters: raw registers
-  chirpstack      LoRaWAN network server: the two freezer probes, 6 bytes each
+  chirpstack      LoRaWAN network server: the two freezer probes, 6-byte application payloads
   coldstore-ctrl  freezer door contact
   weather-roof    weather station on the roof
   mes             manufacturing execution system: site configuration, current orders

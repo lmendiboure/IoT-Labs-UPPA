@@ -35,27 +35,58 @@ with VS Code, run them in the workstation. The record is `~/iot-labs/record`, se
 
 | Tool | What it does |
 |---|---|
-| the **viewer**, http://localhost:8080 on your laptop (`relay:8080` inside the lab) | every MQTT packet of the lab, live. *Packets*: each packet, its direction (↑ to the broker, ↓ from it), type, topic, payload, sizes; click a payload to see it whole; the **filter** box keeps only the packets that mention what you type; `PINGREQ`/`PINGRESP` are hidden unless you untick the box; the top line counts the last minute. *Topics*: per topic, over 5 minutes. *Clients*: every connection, its settings, how it ended, and a **Freeze** button |
+| the **viewer**, http://localhost:8080 on your laptop (`relay:8080` inside the lab) | every MQTT packet that passes through the lab relay, live — **not all traffic on the simulated network**. *Packets*: each observed MQTT packet, its direction (↑ to the broker, ↓ from it), type, topic, payload and sizes; click a payload to see it whole; the **filter** box keeps only packets that mention what you type; `PINGREQ`/`PINGRESP` are hidden unless you untick the box; the top line counts the last minute. *Topics*: per topic, over 5 minutes. *Clients*: every observed MQTT connection, its settings, how it ended, and a **Freeze** button |
 | `check` | tells whether each exercise works, and if not, why. `check 3` checks exercise 3 only |
 | `hint 3` | the next hint for exercise 3; run it again for the next one. The last hint is close to the answer |
 | `check report` | writes the file you hand in, `work/report-lab1.txt`. An exercise counts from the first time `check` confirmed it |
 
-## Python, JSON and the terminal in ten lines
+## Terminal, JSON and Python — the minimum you need
 
-```text
-Terminal  cd ~/iot-labs/lab1 · ls · cat file      move, list, print a file;  ↑ recalls a command
-          Ctrl+C stops the running program;  nano file edits (Ctrl+O save, Ctrl+X quit) — or VS Code
-JSON      {"temperature_c": 20.4, "tags": ["a", "b"]}   double quotes only, no comma after the last item
-          python -m json.tool tree.json                  checks a JSON file, says where it is broken
-Python    import json;  d = json.loads(text);  text = json.dumps(d)       text <-> dictionary
-          d["pressure_psi"] · float("20.65") · round(x, 2) · f"lab/sensors/{name}/env"
-          from datetime import datetime, timezone
-          datetime.now(timezone.utc).isoformat(timespec="seconds")      now, ISO 8601, in UTC
-          datetime.fromtimestamp(1790000000, timezone.utc).isoformat()  seconds since 1970 -> ISO
-          import base64, struct;  raw = base64.b64decode(s);  struct.unpack(">BhBBB", raw)  bytes -> numbers
+### Terminal
+
+```bash
+cd ~/iot-labs/lab1       # move to the lab
+ls                       # list files
+cat file                 # print a file
 ```
 
-In `struct`: `>` big-endian, `B` one unsigned byte, `h` two bytes read as a signed number.
+`↑` recalls a previous command. `Ctrl+C` stops the running program. Edit files with VS Code, or with
+`nano file` (`Ctrl+O` saves, `Ctrl+X` quits).
+
+### JSON
+
+```json
+{"temperature_c": 20.4, "tags": ["a", "b"]}
+```
+
+JSON uses double quotes and no trailing comma. Check a file with:
+
+```bash
+python -m json.tool tree.json
+```
+
+### Python
+
+```python
+import json
+d = json.loads(text)                 # JSON text -> dictionary
+text = json.dumps(d)                 # dictionary -> JSON text
+
+d["pressure_psi"]
+float("20.65")
+round(x, 2)
+f"lab/sensors/{name}/env"
+
+from datetime import datetime, timezone
+datetime.now(timezone.utc).isoformat(timespec="seconds")
+datetime.fromtimestamp(1790000000, timezone.utc).isoformat()
+
+import base64, struct
+raw = base64.b64decode(s)
+struct.unpack(">BhBBB", raw)
+```
+
+In `struct`, `>` means big-endian, `B` one unsigned byte, and `h` two bytes read as a signed integer.
 
 ## When something goes wrong
 

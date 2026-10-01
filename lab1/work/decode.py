@@ -1,9 +1,9 @@
-"""decode.py — the freezer probe's frame, from the 'data' field of a ChirpStack event (exercise 3).
+"""decode.py — the freezer probe's application payload, from the 'data' field of a ChirpStack event (exercise 3).
 
     python decode.py <base64>      decode one frame, for example: python decode.py EfiYHFcA
     python decode.py --test        check your decoder against a frame whose content is known
 
-The frame, from the probe's datasheet (6 bytes):
+The application payload, from the probe's datasheet (6 bytes):
 
     byte   0            1-2                               3          4         5
            frame type   temperature, hundredths of °C,    humidity   battery   status
@@ -19,7 +19,7 @@ import sys
 def decode(data_b64):
     """Return the probe's values from the base64 text of the 'data' field."""
     raw = b""                       # TODO: the bytes hidden in the base64 text
-    # TODO: unpack the 6 bytes with struct.unpack(FORMAT, raw).
+    # TODO: unpack the 6-byte application payload with struct.unpack(FORMAT, raw).
     #   In a format, '>' means big-endian, 'B' one unsigned byte, 'b' one signed byte,
     #   'H' two bytes unsigned, 'h' two bytes signed. Which five letters describe this frame?
     kind, centi, rh, battery, status = 0, 0, 0, 0, 0

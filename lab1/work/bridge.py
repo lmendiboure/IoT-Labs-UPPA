@@ -1,8 +1,8 @@
-"""bridge.py — republishes two of the plant's devices in your unified namespace (exercise 6).
+"""bridge.py — republishes two of the plant's devices in your plant namespace (exercise 6).
 
     python bridge.py          stop it with Ctrl+C
 
-It subscribes to the vendors' topics, cleans each message, and publishes it on the device's topic
+It subscribes to the vendors' topics, normalizes each message, and publishes it on the device's topic
 from your tree.json. Everything marked TODO is yours to write.
 """
 import json
@@ -37,7 +37,7 @@ def compressor(d):
 
 def probe(event):
     """A ChirpStack uplink event, already parsed from JSON -> the clean message of the probe."""
-    # TODO: temperature_c from the frame in event["data"] (use decode()),
+    # TODO: temperature_c from the 6-byte application payload in event["data"] (use decode()),
     #       measured_at: the probe has no clock — the best time is the network server's reception
     #       time, event["time"]. Add any field you find useful (fCnt, battery...).
     return {}

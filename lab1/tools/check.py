@@ -178,7 +178,7 @@ def ex3(out):
     lo, hi = min(p["payload_size"] for p in cs), max(p["payload_size"] for p in cs)
     expect("chirpstack_payload_bytes", lambda v: lo * 0.95 <= v <= hi * 1.05,
            "not the payload size of a ChirpStack event")
-    expect("probe_frame_bytes", lambda v: v == 6,
+    expect("probe_payload_bytes", lambda v: v == 6,
            "decode the base64 'data' field and count the bytes")
     v = number("probe_temperature_c")
     if v is not None:

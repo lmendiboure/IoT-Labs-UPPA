@@ -27,13 +27,13 @@ Three uses of the plant's data, each in the five lines of L1:
 A diagram of the site's data path, layer by layer: devices, networks, gateways, broker, platform,
 applications. A Mermaid diagram (GitHub draws it) or an image in this folder.
 
-## 3. Unified namespace *(Lab 1, at home before Lab 2)*
+## 3. Topic organisation *(Lab 1, at home before Lab 2)*
 
-The structure of the plant's topic tree, with two or three examples, and the rules that go with it.
+The structure of the plant's topic tree, with two or three examples, what queries it makes easy, and one limitation you observed.
 
 ## 4. Device status and liveness *(Lab 1, at home before Lab 2)*
 
-How the site knows that a device is alive: topics, payloads, QoS, retain flags, keepalive.
+How the site observes MQTT-client liveness: topics, payloads, retain flags and keepalive — and what this does not prove about sensors behind a gateway.
 
 ## 5. Delivery guarantees per flow *(Lab 2)*
 

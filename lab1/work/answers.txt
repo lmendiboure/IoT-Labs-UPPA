@@ -2,128 +2,167 @@ LAB 1 — HOW DO OUR DATA TRAVEL TODAY? — ANSWERS
 Name: (your name)
 Observations made on (day, time):
 
-Plain text. Short and precise: a figure with its unit, a filled table, a reason in one sentence.
-Replace the ___ and fill the tables; add lines where you need them.
+Plain text. Short and precise: figures with units, filled tables, and reasons in one or two sentences.
+The 15 numbered questions are the core lab. The D questions are optional extensions.
 
-Predictions — written BEFORE each part, never corrected afterwards; they are not graded on being right.
-  Part 2, bytes reaching the broker for one freezer reading: ___   a lost reading comes back? yes / no
-  Part 4, subscriptions for everything about the autoclave, today: ___   with a good namespace: ___
-  Part 5, delay before an application knows the cleanroom gateway died: ___   how it would know:
+== Q1. Reconstruct your MQTT exchange ==========================================================
 
-== Q1. Put names on the architecture ==========================================================
+subscription client / broker / filter:
+publication client / broker / topic:
+packet sequence observed:
+who decides which subscribers receive a publication, and why:
 
-Device             | link to the next element  | client id publishing it | topic
--------------------+---------------------------+-------------------------+------------------------
-freezer probe T1   |                           |                         |
-cleanroom CR-01    |                           |                         |
-main energy meter  |                           |                         |
-autoclave          |                           |                         |
-CNC router         |                           |                         |
+== Q2. Read a topic filter =====================================================================
 
-(a) Why each of the four does not publish MQTT itself:
-  -
-  -
-  -
-  -
-(b) What goes wrong if a translator fails, that would not if the device published directly
-    (and the real case you saw in the Clients tab):
+filter                         | matching topics
+-------------------------------+---------------------------------------------------------------
+hygrolab/#                     |
+hygrolab/+/temperature         |
++/CR-01/temperature            |
 
-== Q2. Where do the bytes go? =================================================================
+Two cases that are easy to confuse, and why:
+  1.
+  2.
 
-(a) fixed header ___ + topic length ___ + topic ___ + packet identifier ___ + payload ___ = ___ bytes
-    share of the measured value: ___ %
-(b) the probe's 6 bytes in an event of ___ bytes = ___ %
-    other information in the event      | who could use it
-    ------------------------------------+-----------------------------------
-                                        |
-                                        |
-                                        |
-(c) where the difference is added, and why it is acceptable there:
+== Q3. Who really publishes? ===================================================================
 
-== Q3. Lost frames ============================================================================
+Physical device     | first link / next element       | MQTT client id       | one MQTT topic
+--------------------+---------------------------------+----------------------+---------------------------
+FRZ1-T1             |                                 |                      |
+CR-01               |                                 |                      |
+EM-MAIN             |                                 |                      |
+AC-1                |                                 |                      |
+CNC-1               |                                 |                      |
 
-(a) probe ___ : fCnt ___ is followed by fCnt ___ , around ___ (time) — missing:
-    What fCnt detects that the times alone do not:
-(b) can the plant get them back? why not:
-(c) the rule, and what to do when it fires:
+== Q4. What changes when a translator is in the path? ==========================================
 
-== Q4. Two clients, one identifier ============================================================
+Device 1: ___
+  reason the translator exists:
+  extra failure / ambiguity introduced:
 
-(a) what happens (connections in 30 s: ___), and why:
-(b) in the plant; why it is hard to diagnose; how ids are made unique:
+Device 2: ___
+  reason the translator exists:
+  extra failure / ambiguity introduced:
 
-== Q5. What is wrong with the plant's topics? =================================================
+== Q5. How expensive is the representation? ====================================================
 
-   problem                    | seen in (topic or payload)     | what it breaks for a subscriber
-   ---------------------------+--------------------------------+---------------------------------
-1.                            |                                |
-2.                            |                                |
-3.                            |                                |
-4.                            |                                |
+fixed header ___ + topic length ___ + topic ___ + packet identifier ___ + payload ___ = ___ bytes
+textual measured value: ___ bytes, i.e. ___ % of the MQTT PUBLISH
 
-Why "everything in the curing area" is impossible today:
+== Q6. Where does the extra information come from? =============================================
 
-== Q6. Your namespace under stress ============================================================
+Field not in the probe payload | component that can add it | one consumer / use
+-------------------------------+---------------------------+------------------------------------
+                               |                           |
+                               |                           |
+                               |                           |
 
-(a) order of the levels, and what ISA-95 gave:
-(b) filters for every temperature on the site; what you would change, at what cost:
-(c) the CNC router moves to trimming-2 — who loses it, and your proposal:
-(d) the bridge stops for ten minutes:
+== Q7. Detect a missing transmission ============================================================
 
-== Q7. What a newcomer receives ===============================================================
+probe: ___
+fCnt ___ is followed by fCnt ___ around ___
+missing counter(s):
+what the gap lets you conclude:
+what it does NOT tell you about where the loss occurred:
+can the temperature itself be reconstructed? why:
 
-(a) what arrives at once, and why:
-(b) the device: ___ ; its retained messages that may lie while it is down:
-    what an application should check before trusting a retained value:
+== Q8. What time does the audit actually know? =================================================
 
-== Q8. How long before the broker notices? ====================================================
+measurement time:
+radio transmission time:
+network-server reception time:
+MQTT arrival time:
+which time is actually available for the freezer probe:
+consequence for the claim "below -15 °C throughout the hour":
 
-(a) frozen at ___, offline at ___, measured ___ s; predicted ___ s; why they can differ:
-(b) ending          | will published? when?
-    ----------------+------------------------
-    DISCONNECT      |
-    Ctrl+C          |
-    frozen link     |
-(c) keepalive | wake-ups per hour | worst-case detection
-    ----------+-------------------+---------------------
-    15 s      |                   |
-    60 s      |                   |
-(d) keepalive for the cleanroom gateway, and why; what tells the plant a probe is dead:
+== Q9. Two connections, one client id ===========================================================
 
-== Q9. Birth, death and goodbye of a gateway ==================================================
+what happens when the second copy starts:
+explanation using the MQTT client-id rule:
+what the id lets the broker distinguish:
+what the id alone does NOT prove:
 
-(a) why offline, and the fix:
-(b) moment            | topic | payload | retained?
-    ------------------+-------+---------+----------
-    birth (when?)     |       |         |
-    last will         |       |         |
-    planned shutdown  |       |         |
-    the order of the last step, and why:
+== Q10. What is inconsistent today? =============================================================
 
-== Q10. What you tell Maialen (10 lines at most) ===============================================
+Problem                        | evidence (topic / payload)    | what an application must special-case
+-------------------------------+-------------------------------+---------------------------------------
+1.                             |                               |
+2.                             |                               |
+3.                             |                               |
+4.                             |                               |
+
+== Q11. What did your hierarchy optimize? =======================================================
+
+order of topic levels and reason:
+which of N1-N5 became easy because of this order:
+filters needed for every temperature sensor on the site:
+what this reveals about a single topic hierarchy:
+
+== Q12. What did the bridge know, and what did it invent? ======================================
+
+Device / output field          | origin: physical device / later component / bridge | explanation
+-------------------------------+------------------------------------------------------+------------
+CMP-1 pressure_bar             |                                                      |
+CMP-1 measured_at              |                                                      |
+FRZ1-T1 temperature_c          |                                                      |
+FRZ1-T1 measured_at            |                                                      |
+
+what can be normalized reliably:
+what missing information cannot be recovered:
+what subscribers see if the bridge stops for ten minutes:
+
+== Q13. What does a newcomer really learn from retained data? ==================================
+
+messages received immediately because retained:
+one retained value that could be stale:
+what must be checked before treating it as current evidence:
+
+== Q14. Clean exit, crash and silent link =======================================================
+
+ending             | will published? | when / why
+-------------------+-----------------+----------------------------------------------------------
+clean DISCONNECT   |                 |
+Ctrl+C             |                 |
+frozen link        |                 |
+
+keepalive | expected worst-case detection | PINGREQ wake-ups/hour for an idle client
+----------+-------------------------------+---------------------------------------------
+15 s      |                               |
+60 s      |                               |
+
+choice for the mains-powered cleanroom gateway and why:
+why this does not prove a freezer probe behind the gateway is alive:
+
+== Q15. What do you tell Maialen? — 10 lines at most ============================================
 
 Can the plant prove every hour of the freezer today?
 
-What prevents it (each point: what you measured or observed):
+Strongest evidence observed:
 
-The three changes you recommend first, in order:
+Remaining gaps:
+
+Three changes to prioritize first:
   1.
   2.
   3.
 
-What this lab does not yet tell you about the cure records:
+What this lab still does not establish about reliable cure-record delivery:
 
 
-================================== ◆ DEEPER (optional) =======================================
+================================== ◆ OPTIONAL EXTENSIONS =======================================
 
-== D1. The lab is not the plant ==
+== D1. What the broker says about itself ==
 
-== D2. Why not HTTPS for the cleanroom? ==
+== D2. The lab is not the plant ==
 
-== D3. From one plant to the group ==
+== D3. From one plant to a larger fleet ==
 
-== D4. What the broker says about itself ==
+== D4. Automate the audit gap check ==
 
-== D5. Sparkplug B ==
+== D5. How much timing uncertainty? ==
 
-== D6. The whole plant ==
+== D6. Diagnose duplicate identities from observations only ==
+
+== D7. Can one tree make every query easy? ==
+
+== D8. Construct a misleading status ==

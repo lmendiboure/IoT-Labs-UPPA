@@ -33,20 +33,20 @@ flowchart LR
 **L3** *Communication protocols and system architectures* — layers, sharing, addressing, transport,
 application, data, placement, edge, engineering models, method.
 
-## Which protocol for what
+## Protocol families you will meet
 
-The protocols of the course do not compete: each answers a different question, at a different place
-in the chain.
+These technologies sit at different places in the chain and expose different interaction models. The
+labs will make you compare their consequences rather than treat this table as a recipe.
 
-| Protocol | Model | Runs over | Made for | Lab |
+| Technology | Interaction model | Typical transport here | Main role in this course | Lab |
 |---|---|---|---|---|
-| **MQTT** | publish / subscribe, through a broker | TCP | many devices and applications that must not know each other | 1, 2 |
-| **LoRaWAN** | uplinks from devices, through gateways, to a network server | sub-GHz radio | a few bytes, kilometres away, for years on a battery | 1, 4 |
-| **Modbus TCP** | request / response, registers | TCP | reading a controller's values; the oldest fieldbus still everywhere | 3 |
-| **OPC UA** | client / server, and publish / subscribe | TCP | machines that describe their own data | 3 |
-| **CoAP** | request / response, with observation | UDP | very constrained devices and networks | 5 |
-| **LwM2M** | device management, a standard object model | CoAP | configuring, updating and monitoring a fleet | 5 |
-| **HTTP / REST** | request / response | TCP | applications and platform APIs | 6, 8 |
+| **MQTT** | publish / subscribe through a broker | TCP | decoupled exchange between producers and consumers | 1, 2 |
+| **LoRaWAN** | device uplinks through gateways to a network server | LoRa radio, sub-GHz | low-rate, long-range IoT connectivity | 1, 4 |
+| **Modbus TCP** | request / response over registers | TCP | simple access to controller values | 3 |
+| **OPC UA** | client / server; also PubSub | UA TCP and other mappings | structured industrial interoperability | 3 |
+| **CoAP** | request / response; observe | UDP | web-like interactions for constrained environments | 5 |
+| **LwM2M** | device management with a standard object model | CoAP | configuring, updating and monitoring a fleet | 5 |
+| **HTTP** | request / response | TCP in these labs | application and REST-style platform APIs | 6, 8 |
 
 ## The habits of the course
 

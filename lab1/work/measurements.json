@@ -2,6 +2,6 @@
   "cleanroom_topic_bytes": null,
   "cleanroom_packet_bytes": null,
   "chirpstack_payload_bytes": null,
-  "probe_frame_bytes": null,
+  "probe_payload_bytes": null,
   "probe_temperature_c": null
 }
