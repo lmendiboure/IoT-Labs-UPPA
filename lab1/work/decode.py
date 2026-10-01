@@ -1,4 +1,4 @@
-"""decode.py — the freezer probe's application payload, from the 'data' field of a ChirpStack event (exercise 3).
+"""decode.py — the freezer probe's application payload, from the 'data' field of a ChirpStack event.
 
     python decode.py <base64>      decode one frame, for example: python decode.py EfiYHFcA
     python decode.py --test        check your decoder against a frame whose content is known
@@ -9,7 +9,7 @@ The application payload, from the probe's datasheet (6 bytes):
            frame type   temperature, hundredths of °C,    humidity   battery   status
            (0x11)       signed, big-endian                %          %
 
-Exercise 6 imports decode() from this file: keep its name and what it returns.
+`bridge.py` imports `decode()` from this file: keep its name and return structure.
 """
 import base64
 import struct

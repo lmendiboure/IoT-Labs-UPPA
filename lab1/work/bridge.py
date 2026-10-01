@@ -1,4 +1,4 @@
-"""bridge.py — republishes two of the plant's devices in your plant namespace (exercise 6).
+"""bridge.py — republishes two of the plant's devices in your plant namespace.
 
     python bridge.py          stop it with Ctrl+C
 
@@ -11,11 +11,11 @@ from datetime import datetime, timezone
 
 import paho.mqtt.client as mqtt
 
-from decode import decode           # your decoder of exercise 3
+from decode import decode           # your freezer payload decoder
 
 HOST = os.getenv("MQTT_HOST", "relay")
 PORT = int(os.getenv("MQTT_PORT", "1884"))
-TREE = json.load(open(os.path.join(os.getenv("WORK", "/work"), "tree.json")))   # exercise 5
+TREE = json.load(open(os.path.join(os.getenv("WORK", "/work"), "tree.json")))
 
 NAME = "alice"                      # TODO: your name
 PSI_TO_BAR = 0.0689476

@@ -8,7 +8,4 @@ RUN apt-get update \
 RUN pip install --no-cache-dir paho-mqtt==2.1.0 tzdata
 WORKDIR /lab
 COPY . /lab
-RUN chmod +x /lab/check.py /lab/hint.py \
- && ln -s /lab/check.py /usr/local/bin/check \
- && ln -s /lab/hint.py /usr/local/bin/hint
 ENV MQTT_HOST=relay MQTT_PORT=1884 VIEWER=http://relay:8080 WORK=/work PYTHONUNBUFFERED=1

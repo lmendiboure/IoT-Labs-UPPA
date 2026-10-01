@@ -27,7 +27,7 @@ services:
     depends_on: [relay]
     restart: unless-stopped
 
-  workstation:                  # where you work: ./work is /work, ../record is /record
+  workstation:                  # where you work: ./work is /work
     build: ./tools
     image: lab1-tools:1
     hostname: workstation
@@ -35,6 +35,5 @@ services:
     working_dir: /work
     volumes:
       - ./work:/work
-      - ../record:/record
     depends_on: [relay]
     restart: unless-stopped

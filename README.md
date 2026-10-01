@@ -31,12 +31,6 @@ cd ~/iot-labs/lab1 && docker compose up -d --build
 
 Then open the lab page ([Lab 1](lab1/)). [Working on your VM](docs/setup.md) contains the common VM, SSH, Docker and viewer setup.
 
-## Across the ten labs
-
-The numbered questions form the core work and are recorded in `work/answers.txt`; ◆ extensions provide additional problems based on the same material. Implementation exercises can be checked locally with `check`, while `check report` generates the submission file.
-
-The ten labs progressively build a single architecture. Each session adds or revises decisions in `record/site-architecture.md`, with the constraint, retained option, rejected option and rationale. Lab 10 uses this record as the basis for the final defence.
-
 *For the link between the labs and the lectures, see [the course map](docs/course.md). Adour
 Composites, its people and its data are fictional; the protocols, standards and orders of magnitude
 are real.*

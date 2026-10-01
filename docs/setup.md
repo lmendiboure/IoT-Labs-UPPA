@@ -22,22 +22,16 @@ docker compose exec workstation bash               # opens a terminal in your wo
 
 After `git pull` (a new lab, or a fix), start again with `--build`, so that the lab's tools are rebuilt.
 
-The exercises are executed **inside the workstation container**, which contains Python, the MQTT clients, `check` and `hint`. The directory `~/iot-labs/lab1/work` on the VM is mounted as `/work` in that container; `~/iot-labs/record` is mounted as `/record`. Multiple workstation shells can be opened when an exercise requires concurrent publishers and subscribers.
+The exercises are executed **inside the workstation container**, which contains Python and the MQTT clients. The directory `~/iot-labs/lab1/work` on the VM is mounted as `/work` in that container. Open several workstation shells when an exercise requires concurrent publishers and subscribers.
 
-## The tools
+## Viewer
 
-| Tool | What it does |
-|---|---|
-| the **viewer**, http://localhost:8080 on your laptop (`relay:8080` inside the lab) | every MQTT packet that passes through the lab relay, live — **not all traffic on the simulated network**. *Packets*: each observed MQTT packet, its direction (↑ to the broker, ↓ from it), type, topic, payload and sizes; click a payload to see it whole; the **filter** box keeps only packets that mention what you type; `PINGREQ`/`PINGRESP` are hidden unless you untick the box; the top line counts the last minute. *Topics*: per topic, over 5 minutes. *Clients*: every observed MQTT connection, its settings, how it ended, and a **Freeze** button |
-| `check` | validates the implementation exercises; `check 3` runs only the checks associated with exercise 3 |
-| `hint 3` | displays progressive diagnostic hints for exercise 3 |
-| `check report` | generates `work/report-lab1.txt`, including the recorded validation state of the exercises |
+Open <http://localhost:8080> on your laptop (`relay:8080` inside the lab). It shows every MQTT packet that passes through the lab relay, live — **not all traffic on the simulated network**. The **Packets** tab shows direction (↑ to the broker, ↓ from it), packet type, topic, payload and sizes; click a payload to expand it, and use the filter box to isolate traffic. `PINGREQ`/`PINGRESP` are hidden by default. The **Topics** tab aggregates activity by topic, and **Clients** shows observed MQTT connections and provides the **Freeze** control used later in Lab 1.
 
 ## When something goes wrong
 
 | You see | It usually means | Try |
 |---|---|---|
-| `check: command not found` | you are on the VM, not in the workstation | `docker compose exec workstation bash` |
 | `no configuration file provided` | you are not in the lab's folder | `cd ~/iot-labs/lab1` |
 | a service is missing | it stopped or failed | `docker compose logs <service>`, then `docker compose up -d` |
 | the viewer does not open | no SSH tunnel | `ssh -L 8080:localhost:8080 ...`, or VS Code's *Ports* tab |

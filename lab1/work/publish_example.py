@@ -2,7 +2,7 @@
 
     python publish_example.py
 
-Exercise 4 starts from sensor.py, which works the same way.
+`sensor.py` uses the same MQTT pattern.
 """
 import os
 
