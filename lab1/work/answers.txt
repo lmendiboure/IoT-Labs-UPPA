@@ -48,14 +48,19 @@ Device 2: ___
 
 fixed header ___ + topic length ___ + topic ___ + packet identifier ___ + payload ___ = ___ bytes
 textual measured value: ___ bytes, i.e. ___ % of the MQTT PUBLISH
+comparison with the 6-byte freezer application payload:
+why a larger IP-side representation may still be reasonable:
 
-== Q6. Where does the extra information come from? =============================================
+== Q6. Where do meaning and metadata come from? ================================================
 
 Field not in the probe payload | component that can add it | one consumer / use
 -------------------------------+---------------------------+------------------------------------
                                |                           |
                                |                           |
                                |                           |
+
+component that knows how bytes 1-2 encode temperature:
+consequence if firmware changes the encoding but the decoder does not:
 
 == Q7. Detect a missing transmission ============================================================
 
@@ -109,6 +114,7 @@ FRZ1-T1 measured_at            |                                                
 
 what can be normalized reliably:
 what missing information cannot be recovered:
+original value and transformation evidence needed to justify pressure_bar = 6.89:
 what subscribers see if the bridge stops for ten minutes:
 
 == Q13. What does a newcomer really learn from retained data? ==================================
@@ -163,6 +169,8 @@ What this lab still does not establish about reliable cure-record delivery:
 
 == D6. Diagnose duplicate identities from observations only ==
 
-== D7. Can one tree make every query easy? ==
+== D7. One device, several identities ==
 
-== D8. Construct a misleading status ==
+== D8. Can one tree make every query easy? ==
+
+== D9. Construct a misleading status ==

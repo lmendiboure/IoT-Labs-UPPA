@@ -1,8 +1,6 @@
 # Lab 1 — How do our data travel today, and can we trust them?
 
-**Designed for 3+ hours of autonomous work.** The **15 numbered questions are the core lab**. The ◆ extensions are optional:
-they go further with the same ideas, but they do not introduce material you will need from later labs.
-You hand in `work/report-lab1.txt`, written by `check report`.
+This lab is designed for a session of a little over three hours. The **15 numbered questions** form the core work; ◆ questions are optional extensions for further analysis. The deliverable is `work/report-lab1.txt`, generated with `check report`.
 
 **Lectures:** L1 (the six blocks), L3 parts 1, 4, 5 and 6. Practical help:
 [Working on your VM](../docs/setup.md).
@@ -22,24 +20,11 @@ The equipment already sends data, but through different devices, protocols, gate
 Before building anything, answer one question: **how do the plant's data travel today, and what can
 we actually prove from what arrives?**
 
-## How to read this lab
-
-There are only three kinds of blocks:
-
-- **Understand** — the minimum you need before the next manipulation.
-- **Do** — something to run, observe or complete. `check N` verifies the implementation exercises.
-- **Q1 … Q15** — what you must answer in `work/answers.txt`. Keep answers short and evidence-based.
-
-The ◆ **Going deeper** boxes are optional. Skip them immediately if the core lab is not finished.
-They are deliberately less guided, not prerequisites for the next lab.
-
-> **Important:** you are not expected to search the web to discover basic tools used in the lab.
-> When a tool or protocol is needed, this page tells you what it is. Documentation becomes useful
-> when you want to verify a detail, not to guess the meaning of the exercise.
+Record the answers to Q1–Q15 in `work/answers.txt`. The optional ◆ extensions can be tackled independently once the core work is complete.
 
 ---
 
-## Step 0 — Get the lab ready
+## Preparation
 
 Follow [Working on your VM](../docs/setup.md) to connect, start the lab and open a terminal in the
 workstation. Then type:
@@ -57,8 +42,7 @@ Exercise 1 — The lab is running
   ✔ MQTT answers at relay:1884
 ```
 
-If a line is red, run `hint 1`. Then open the **viewer** in your laptop's browser at
-<http://localhost:8080> and keep it open for the whole lab.
+If the environment is not reported as ready, `hint 1` provides the corresponding diagnostic. Open the **viewer** in your laptop's browser at <http://localhost:8080> and keep it available throughout the lab.
 
 The viewer is an instrument built for this course: it lets you inspect the MQTT packets that cross the
 lab. To make this possible, every client in the lab connects through `relay:1884` rather than directly
@@ -68,9 +52,7 @@ to the broker.
 
 ## Part 1 — One MQTT message, from publisher to subscriber
 
-Start with the smallest possible system before looking at the whole factory.
-
-### Understand
+Before examining the full plant, we first isolate a single MQTT exchange so that the roles of publisher, broker and subscriber are unambiguous.
 
 **MQTT** is a publish/subscribe protocol. A client can **publish** a message on a **topic**; another
 client can **subscribe** to a topic filter. A **broker** receives publications and forwards each one
@@ -87,35 +69,25 @@ Two wildcards are useful in subscription filters:
 - `+` replaces **one** topic level: `hygrolab/+/temperature`;
 - `#` replaces **the rest** of a topic and must be last: `hygrolab/#`.
 
-You will see packet names such as `CONNECT`, `SUBSCRIBE`, `PUBLISH` and `DISCONNECT` in the viewer.
-For now, read them literally. The detailed delivery guarantees of MQTT belong to Lab 2.
+The viewer will expose packet types such as `CONNECT`, `SUBSCRIBE`, `PUBLISH` and `DISCONNECT`. At this stage, their names are sufficient to reconstruct the exchange; MQTT delivery guarantees and session semantics are studied in Lab 2.
 
-### Do — Exercise 2: publish and subscribe by hand
+### Exercise 2 — Publish and subscribe by hand
 
-In a first workstation terminal:
+Open a first workstation terminal and subscribe to all topics below `hygrolab`:
 
 ```bash
 mosquitto_sub -h relay -p 1884 -t 'hygrolab/#' -v
 ```
 
-What the options mean:
+Here `relay:1884` is the MQTT endpoint exposed by the lab, `-t` specifies the subscription filter, and `-v` prints both the topic and the payload.
 
-```text
--h relay       connect through the lab relay
--p 1884        MQTT port used by the lab
--t '...'       topic filter to subscribe to
--v             print topic and payload
-```
-
-You should receive cleanroom values every few seconds. In a second terminal, publish one message:
+Cleanroom measurements should appear every few seconds. From a second terminal, publish a message of your own:
 
 ```bash
 mosquitto_pub -h relay -p 1884 -t lab/hello -m 'hello from team X'
 ```
 
-Find your `SUBSCRIBE` and your `PUBLISH` in the viewer's **Packets** tab. The plant is noisy: use the
-filter box at the top. `↑` means a packet going toward the broker; `↓` means one coming back from it.
-Then run:
+Use the **Packets** tab to locate the corresponding `SUBSCRIBE` and `PUBLISH`. The filter box is useful because the plant generates continuous background traffic. In the viewer, `↑` denotes a packet travelling toward the broker and `↓` a packet travelling away from it. Once the exchange is visible, run:
 
 ```bash
 check 2
@@ -136,9 +108,6 @@ check 2
 > Topics: `hygrolab/CR-01/temperature`, `hygrolab/CR-02/humidity`, `hygrolab/CR-01/status`,
 > `compressors/CMP1`.
 
-**Keep:** MQTT decouples producers and consumers through the broker; topics are addresses, filters are
-subscription patterns.
-
 <details>
 <summary><strong>◆ Going deeper — D1: what the broker says about itself</strong></summary>
 
@@ -152,10 +121,7 @@ rule in the MQTT specification or Mosquitto documentation and cite the section y
 
 ## Part 2 — From physical devices to MQTT
 
-The plant is not a collection of MQTT sensors. Several field devices cannot, or should not, speak
-MQTT themselves. Follow who actually publishes on their behalf.
-
-### Understand
+The plant is not simply a collection of MQTT sensors. Several field devices use another protocol locally and rely on a gateway or translator before their data reach MQTT. The next step is to identify which component actually publishes each measurement.
 
 This is the current architecture:
 
@@ -202,15 +168,15 @@ A **gateway** or **translator** is part of the data path. It may change the comm
 the message representation, or the identifier visible to the broker. That is useful — but it also
 creates another place where data can be delayed, altered or lost.
 
-### Do — map the real publishers
+### Map the real publishers
 
-Subscribe to everything for about one minute:
+Observe the complete MQTT namespace for about one minute:
 
 ```bash
 mosquitto_sub -h relay -p 1884 -t '#' -v
 ```
 
-Use the viewer's **Topics** and **Clients** tabs to connect messages to the architecture above.
+Use the **Topics** and **Clients** tabs to relate the observed messages to the architecture above.
 
 ### Questions
 
@@ -224,9 +190,6 @@ Use the viewer's **Topics** and **Clients** tabs to connect messages to the arch
 > Choose **two** of the devices that do not publish MQTT directly. For each, explain (1) one credible
 > reason for the translator to exist and (2) one additional failure or ambiguity it introduces for an
 > application consuming the data.
-
-**Keep:** the MQTT client visible at the broker is not necessarily the physical device that produced
-the measurement.
 
 <details>
 <summary><strong>◆ Going deeper — D2: the lab is not the plant</strong></summary>
@@ -248,18 +211,15 @@ without inserting such a relay in the application data path.
 
 ## Part 3 — Follow one freezer reading end to end
 
-The audit requires evidence about the freezer. Follow one temperature from the probe near the door
-(`FRZ1-T1`) to MQTT and separate **the measurement itself** from everything added around it.
+The freezer provides a useful end-to-end case because the audit requires evidence about its temperature history. We will follow one reading from probe `FRZ1-T1` to MQTT and distinguish the physical measurement from the metadata and representations added along the path.
 
-Start this now in a spare terminal and leave it running while you work:
+In a spare terminal, start the uplink monitor and leave it running during this part:
 
 ```bash
 python watch_uplinks.py
 ```
 
-It prints one line for each freezer uplink. You will use the history for Q7.
-
-### Understand
+The script records one line per freezer uplink; the resulting history will be used in Q7.
 
 ```mermaid
 flowchart LR
@@ -272,11 +232,18 @@ flowchart LR
 
 The probe wakes once a minute, measures, sends and sleeps. Its **application payload is 6 bytes**.
 Once LoRaWAN headers are added, the transmitted LoRaWAN frame is larger; the complete physical radio
-transmission is larger again. Do not call all three simply "the 6-byte packet".
+transmission is larger again. The 6-byte quantity therefore refers specifically to the probe's
+application payload.
 
 Every gateway in range can receive the same transmission. The network server deduplicates these
 copies and publishes one JSON event. The original 6 bytes are base64-encoded in the field `data`.
 Each uplink also carries a frame counter, `fCnt`, incremented for successive transmissions.
+
+For the audit, a temperature value is useful only together with enough evidence to relate it to a
+source, a time and a continuous sequence of observations. The data path also matters: some
+information originates in the probe, while other fields are added or transformed later. The
+following questions separate these contributions rather than treating the MQTT event as a single
+indivisible record.
 
 The probe's 6-byte application payload, from its datasheet:
 
@@ -295,7 +262,7 @@ A MQTT 3.1.1 `PUBLISH` packet contains, in simplified form:
 | packet identifier | 0 or 2 | present when required by the selected delivery mode |
 | payload | rest | application message |
 
-### Do — Exercise 3: take a message apart
+### Exercise 3 — Take a message apart
 
 Fill `work/measurements.json`:
 
@@ -325,12 +292,16 @@ check 3
 > **Q5 — How expensive is the representation?**
 > Reconstruct the size of the cleanroom `PUBLISH`: fixed header + topic length + topic + packet
 > identifier (if present) + payload = total. What fraction of the whole MQTT packet is the textual
-> measured value itself?
+> measured value itself? Compare this representation with the freezer probe's 6-byte application
+> payload. Does the larger representation on the IP side necessarily indicate a poor design? Explain
+> why different parts of the system may reasonably use different representations.
 
-> **Q6 — Where does the extra information come from?**
+> **Q6 — Where do meaning and metadata come from?**
 > Compare the probe's 6 bytes with the ChirpStack JSON event. Name **three** useful fields that were
 > not in the probe payload, state which component can add each one, and explain one consumer that
-> could use it.
+> could use it. Then identify which component must know that bytes 1–2 encode a signed temperature
+> in hundredths of a degree. What would happen if the probe firmware changed this encoding while the
+> decoder remained unchanged?
 
 > **Q7 — Detect a missing transmission.**
 > In `watch_uplinks.py`, find a gap in one probe's `fCnt`. Which counter(s) are missing and around what
@@ -342,9 +313,6 @@ check 3
 > **measurement time**, **radio transmission time**, **reception time**, and **MQTT arrival time**.
 > Which one do we really have for this probe, and what uncertainty does that create when claiming
 > that the freezer was below −15 °C throughout an hour?
-
-**Keep:** a value acquires metadata and new representations as it crosses the system. Missing evidence
-is not equivalent to evidence that everything was normal.
 
 <details>
 <summary><strong>◆ Going deeper — D3: from one plant to a larger fleet</strong></summary>
@@ -379,10 +347,7 @@ the delay between physical measurement and radio transmission.
 
 ## Part 4 — What must an MQTT client get right?
 
-Now become a producer. A fourth cleanroom bay is waiting for its sensor, so you create a stand-in and
-observe what the broker actually uses to distinguish clients.
-
-### Understand
+The previous parts observed existing producers. We now add a temporary cleanroom sensor in order to examine what the broker actually uses to distinguish MQTT clients.
 
 A MQTT client opens a connection and presents a **client identifier**. The identifier distinguishes
 client sessions at the broker; **it is not, by itself, proof of the physical device's identity**.
@@ -396,19 +361,17 @@ c.loop_start()
 c.publish("some/topic", "some payload", qos=1)
 ```
 
-One MQTT rule matters for the next experiment: if a new connection uses a client id already in use,
-the broker disconnects the previous connection using that id.
+For the next experiment, one MQTT rule is sufficient: when a new connection presents a client identifier that is already in use, the broker disconnects the existing connection associated with that identifier.
 
-### Do — Exercise 4: your virtual sensor
+### Exercise 4 — Your virtual sensor
 
-Run `python publish_example.py` once and find its packets in the viewer. Then complete the `TODO`
-marked *exercise 4* in `work/sensor.py`:
+Run `python publish_example.py` once and identify its packets in the viewer. Then complete the `TODO` marked *exercise 4* in `work/sensor.py` so that the new sensor:
 
 - choose your name;
 - publish `temperature_c`, `humidity_pct` and `measured_at` as JSON;
 - make `measured_at` an ISO 8601 timestamp in UTC.
 
-The sensor publishes every 5 s on `lab/sensors/<name>/env`.
+It should publish every 5 s on `lab/sensors/<name>/env`.
 
 ```bash
 python sensor.py
@@ -424,8 +387,6 @@ Let it run for a minute, then run `check 4`.
 > seeing the id `sensor-<name>` let the broker distinguish, and what does that id alone **not prove**
 > about the physical sender?
 
-**Keep:** a client id is necessary for session handling; it should not be confused with authentication.
-
 <details>
 <summary><strong>◆ Going deeper — D6: diagnose duplicate identities from observations only</strong></summary>
 
@@ -435,15 +396,22 @@ each indicator, give one alternative explanation that would produce a similar sy
 
 </details>
 
+<details>
+<summary><strong>◆ Going deeper — D7: one device, several identities</strong></summary>
+
+The plant contains a physical sensor, the broker sees an MQTT client id, and applications consume
+data under a topic such as `lab/sensors/alice/env`. Are these necessarily the same identity? For each
+of the three levels, state what it identifies and where the association with the other levels is
+defined. Then give one failure mode in which two of these identities remain consistent while the
+third becomes wrong.
+
+</details>
+
 ---
 
 ## Part 5 — Make heterogeneous data usable together
 
-The plant manager wants one system, but the existing topics and payloads were chosen independently by
-suppliers. First expose the problem; then build a **small plant namespace** and normalize only two
-sources. A later lab will go much further into common data models.
-
-### Understand
+Because the existing topics and payloads were chosen independently by different suppliers, applications currently need source-specific knowledge. This part makes those inconsistencies explicit, then introduces a small common namespace and normalizes two representative sources. Lab 6 will address common data models in greater depth.
 
 A topic hierarchy is an interface. Its level order determines what a subscriber can select with one
 filter. For example, with:
@@ -456,21 +424,19 @@ plant/<area>/<cell>/<device>/...
 There is no single tree that makes every possible cross-cutting query cheap.
 
 Manufacturing standards such as **ISA-95** provide useful vocabulary for levels such as site, area,
-work centre and work unit. In this lab, use that only as a way to name the plant structure; you are
-**not** being asked to design a complete ISA-95 information model or an industrial UNS.
+work centre and work unit. Here, ISA-95 terminology is used only to describe the plant hierarchy;
+data modelling and broader namespace design are addressed in Lab 6.
 
 A **bridge** can subscribe to a vendor topic, convert a message into a common representation, and
 republish it. That helps consumers, but it also becomes another component whose transformations must
 be understood.
-
-### Questions before coding
 
 > **Q10 — What is inconsistent today?**
 > From the viewer's **Topics** tab and payloads, find at least **four distinct interoperability
 > problems** among the freezer, cleanroom, energy meter and compressor. For each: show where you saw
 > it and state what it forces an application developer to know or special-case.
 
-### Do — Exercise 5: one address per device
+### Exercise 5 — One address per device
 
 `work/inventory.json` lists the 13 devices and five application needs:
 
@@ -495,7 +461,7 @@ check 5
 > to select **every temperature sensor on the site**. How many filters are required, and what does
 > this reveal about the limits of a single hierarchy?
 
-### Do — Exercise 6: normalize two sources
+### Exercise 6 — Normalize two sources
 
 Complete the `TODO` in `work/bridge.py` so that it republishes:
 
@@ -517,14 +483,13 @@ check 6
 > **Q12 — What did the bridge know, and what did it invent?**
 > For `CMP-1` and `FRZ1-T1`, classify each output field as (a) directly measured by the physical
 > device, (b) supplied later by another component, or (c) computed by your bridge. Which information
-> can the bridge normalize reliably, and which missing information can it **not** recover? Give one
-> consequence if the bridge itself stops for ten minutes.
-
-**Keep:** normalization can make heterogeneous sources easier to consume, but it does not create
-missing evidence or provenance by magic.
+> can the bridge normalize reliably, and which missing information can it **not** recover? If an
+> auditor challenges a normalized value such as `pressure_bar = 6.89`, what original value and what
+> transformation information would need to be retained to justify it? Finally, give one consequence
+> if the bridge itself stops for ten minutes.
 
 <details>
-<summary><strong>◆ Going deeper — D7: can one tree make every query easy?</strong></summary>
+<summary><strong>◆ Going deeper — D8: can one tree make every query easy?</strong></summary>
 
 Design a second ordering of the same topic levels that makes **all temperature sensors** selectable
 with one filter. Recompute the filters for N1–N5 with that ordering and compare with your first tree.
@@ -537,11 +502,7 @@ answer with the filters you tried, not only an intuition.
 
 ## Part 6 — When data stop, what can we conclude?
 
-Silence is ambiguous: a device may be healthy but quiet, disconnected, or hidden behind a failed
-translator. MQTT provides mechanisms that help applications observe **client liveness**. They do not
-prove that every underlying sensor is healthy.
-
-### Understand
+A period without data is inherently ambiguous: a device may simply be quiet, its connection may have failed, or a translator may have stopped forwarding measurements. MQTT provides mechanisms for observing **client liveness**, but these mechanisms do not establish the health of every physical sensor behind that client.
 
 A **retained message** is the broker's last retained value for a topic. A new subscriber receives it
 immediately, even if the original publication happened earlier.
@@ -561,10 +522,7 @@ c.connect(HOST, PORT, keepalive=KEEPALIVE_S)
 c.publish(STATUS, "online", qos=1, retain=True)
 ```
 
-This says something about the **MQTT client connection**. If that client is a gateway, it does not by
-itself prove that every sensor behind the gateway is still producing valid measurements.
-
-### Questions before coding
+This pattern reports the state of the **MQTT client connection**. When the client is a gateway, its status cannot by itself establish that every attached sensor is still producing valid measurements.
 
 > **Q13 — What does a newcomer really learn from retained data?**
 > Stop your subscriptions, then start a fresh `mosquitto_sub -h relay -p 1884 -t '#' -v` and inspect
@@ -572,7 +530,7 @@ itself prove that every sensor behind the gateway is still producing valid measu
 > retained value that could be stale. What additional information must an application check before
 > treating such a value as current evidence?
 
-### Do — Exercise 7: online and last will
+### Exercise 7 — Online and last will
 
 Complete the `TODO` marked *exercise 7* in `sensor.py`:
 
@@ -581,7 +539,7 @@ Complete the `TODO` marked *exercise 7* in `sensor.py`:
 
 Keep `qos=1` as requested here; Lab 2 will explain and compare MQTT delivery modes.
 
-Watch the status in another terminal:
+Observe the status topic from another terminal:
 
 ```bash
 mosquitto_sub -h relay -p 1884 -t 'lab/sensors/+/status' -v
@@ -589,11 +547,9 @@ mosquitto_sub -h relay -p 1884 -t 'lab/sensors/+/status' -v
 
 Start the sensor, then stop it with **Ctrl+C**. Run `check 7`.
 
-### Do — Exercise 8: a link that dies silently
+### Exercise 8 — A link that dies silently
 
-Set `KEEPALIVE_S = 15`, start the sensor again, and keep the status subscription open. In the
-viewer's **Clients** tab, press **Freeze** on its connection. The relay stops forwarding traffic
-without closing the connection. Record when you freeze it and when `offline` appears. Then run:
+Set `KEEPALIVE_S = 15`, restart the sensor and keep the status subscription open. In the viewer's **Clients** tab, use **Freeze** on that connection: the relay then stops forwarding traffic without closing the underlying connection. Record the freeze time and the time at which `offline` appears, then run:
 
 ```bash
 check 8
@@ -607,12 +563,8 @@ check 8
 > this client-level mechanism insufficient to prove that a battery freezer probe behind a gateway is
 > alive?
 
-**Keep:** retained state helps late subscribers; a last will reports an unclean client disappearance;
-keepalive bounds how long a silent MQTT connection can look alive. None of these replaces end-to-end
-evidence about the physical measurement.
-
 <details>
-<summary><strong>◆ Going deeper — D8: construct a misleading status</strong></summary>
+<summary><strong>◆ Going deeper — D9: construct a misleading status</strong></summary>
 
 Using only mechanisms already used in this lab, construct or describe a sequence in which the
 retained status is `online` although fresh measurements have stopped. Then construct the reverse:
@@ -633,7 +585,7 @@ robust application should compare before raising an alarm.
 > End with one sentence explaining what this lab still does **not** establish about reliable delivery
 > of the autoclave's cure records — that is where Lab 2 begins.
 
-## Hand in and update your record
+## Submission and architecture record
 
 Run:
 
@@ -641,11 +593,8 @@ Run:
 check report
 ```
 
-Download `~/iot-labs/lab1/work/report-lab1.txt` and hand it in. It contains your answers, work files
-and the first time each exercise passed.
+Submit `~/iot-labs/lab1/work/report-lab1.txt`. The file contains your answers, the relevant work files and the first successful validation time recorded for each exercise.
 
-Before Lab 2, update `~/iot-labs/record/site-architecture.md`, sections 1 to 4: uses of the data,
-architecture, topic organisation, and liveness. For each architectural decision, record the
-constraint, retained option, rejected option and reason.
+Before Lab 2, update sections 1–4 of `~/iot-labs/record/site-architecture.md`: uses of the data, architecture, topic organisation and liveness. For each architectural decision, record the constraint, retained option, rejected option and rationale.
 
 *Next: Lab 2 — can we lose a cure record if the network fails?*

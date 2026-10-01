@@ -1,11 +1,10 @@
 # The course map
 
-The labs apply the lectures of *IoT Systems Design*. This page shows where each lab sits; you do not
-need it to do a lab, but it helps to see the whole.
+The labs apply the material developed in *IoT Systems Design*. The map below positions each session within the end-to-end system and indicates the corresponding lecture material.
 
 ## One chain, from the sensor to its use
 
-Every lab works on one part of the same chain. Whatever the lab, you can say where you are.
+The sessions progressively cover different parts of the same end-to-end chain.
 
 ```mermaid
 flowchart LR
@@ -48,9 +47,6 @@ labs will make you compare their consequences rather than treat this table as a 
 | **LwM2M** | device management with a standard object model | CoAP | configuring, updating and monitoring a fleet | 5 |
 | **HTTP** | request / response | TCP in these labs | application and REST-style platform APIs | 6, 8 |
 
-## The habits of the course
+## Engineering principles used throughout the course
 
-- Before a protocol, the interaction pattern: request/response, publish/subscribe, or observe.
-- Count the bytes before choosing.
-- Every decision is written the same way: **the constraint, the option retained, the option
-  rejected, and the reason.** That is the format of the decision log in your record.
+The labs repeatedly use three principles: distinguish the interaction model from the protocol that implements it; quantify communication costs rather than reasoning only from protocol names; and justify architectural decisions in terms of a constraint, a retained option, an alternative and the rationale for the choice. The same structure is used in the decision log.

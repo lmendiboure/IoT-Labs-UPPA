@@ -20,10 +20,7 @@ Over ten labs, you build that system, one question at a time.
 | 9 | Who can read and write our data? | TLS, authentication, access control |
 | 10 | Is our architecture right? | you defend it |
 
-Each lab is designed for a **full three-hour session of autonomous work**, with optional extensions
-for students who finish the core early. You work on a virtual machine that runs the simulated plant.
-The data are simulated, but they behave like the real thing: shifts, cure cycles, a freezer door opened
-a dozen times a day, devices that crash.
+Each lab is designed for a full three-hour session, with optional extensions beyond the core work. The simulated plant runs on a virtual machine and reproduces the kinds of events needed throughout the course: shifts, cure cycles, door openings, changing measurements and device failures.
 
 ## Start
 
@@ -32,21 +29,13 @@ git clone <this repository's URL> ~/iot-labs      # once; for a new lab later: c
 cd ~/iot-labs/lab1 && docker compose up -d --build
 ```
 
-Then open the lab's page ([Lab 1](lab1/)): it tells you everything else. If you have never used SSH,
-Docker or VS Code Remote, read [Working on your VM](docs/setup.md) first (ten minutes).
+Then open the lab page ([Lab 1](lab1/)). [Working on your VM](docs/setup.md) contains the common VM, SSH, Docker and viewer setup.
 
-## How a lab works
+## Across the ten labs
 
-- **The lab's page is the subject.** Read it in order: each part gives only the concepts needed for the next observation or manipulation.
-- **You observe and manipulate** the system from a terminal and from a viewer. The viewer shows the
-  MQTT traffic that passes through the lab's observation point — not every packet on every network.
-  `check` tells you whether an implementation exercise works; `hint` helps you when you are stuck.
-- **You answer** the numbered questions in `work/answers.txt`. They form the graded core of the lab.
-  Optional ◆ **Going deeper** questions explore the same material with less guidance; they are not
-  prerequisites for later labs.
-- **You hand in** one text file, written by `check report`.
-- **Across the ten labs, you design one architecture.** Each lab adds or revises justified decisions in
-  `record/site-architecture.md`; in Lab 10, you defend the resulting system.
+The numbered questions form the core work and are recorded in `work/answers.txt`; ◆ extensions provide additional problems based on the same material. Implementation exercises can be checked locally with `check`, while `check report` generates the submission file.
+
+The ten labs progressively build a single architecture. Each session adds or revises decisions in `record/site-architecture.md`, with the constraint, retained option, rejected option and rationale. Lab 10 uses this record as the basis for the final defence.
 
 *For the link between the labs and the lectures, see [the course map](docs/course.md). Adour
 Composites, its people and its data are fictional; the protocols, standards and orders of magnitude
