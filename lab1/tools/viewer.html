@@ -135,7 +135,7 @@ async function tick() {
     }
     const t = await (await fetch('/api/totals?window=60')).json();
     document.getElementById('totals').textContent =
-      `last minute: ${t.packets} packets, ${t.bytes_up} B ↑, ${t.bytes_down} B ↓`;
+      `last minute: ${t.publish_up} messages published (${t.publish_up_bytes} B of PUBLISH packets) · ${t.packets} packets in all`;
   } catch (e) { document.getElementById('totals').textContent = 'relay unreachable'; }
 }
 

@@ -31,13 +31,17 @@ HINTS = {
         "-v prints the topic in front of each message.",
     ],
     3: [
-        "Everything you need is in the viewer. The Packets tab shows, for each packet, the payload size "
-        "and the size of the whole packet. The Topics tab averages them over the last 5 minutes.",
-        "The 'data' field of a ChirpStack event is base64. In Python: "
-        "len(base64.b64decode('...')). Copy one from the viewer or from mosquitto_sub.",
-        "plant_bytes_per_minute: in the Topics tab, for every topic published by the plant, "
-        "messages x avg packet, summed, then divided by 5 (the tab covers 5 minutes). "
-        "Leave out your own topics (lab/...).",
+        "The viewer gives sizes: in the Packets tab, 'payload B' and 'packet B' for each packet. The topic's "
+        "length is just its number of characters. For the ChirpStack event, click its payload to see it whole: "
+        "copy the value of 'data'.",
+        "Which event is FRZ1-T1? Look at deviceInfo.deviceName in the event, and at the note of FRZ1-T1 in "
+        "inventory.json. Then in Python: raw = base64.b64decode(data); len(raw) gives probe_frame_bytes.",
+        "struct.unpack('>BhBBB', raw) gives (frame type, temperature, humidity, battery, status). The temperature "
+        "is in hundredths of a degree: divide by 100. In decode.py:\n"
+        "    import base64, struct, sys\n"
+        "    raw = base64.b64decode(sys.argv[1])\n"
+        "    kind, centi, rh, battery, status = struct.unpack('>BhBBB', raw)\n"
+        "    print(len(raw), 'bytes:', centi / 100, 'degC', rh, '%', battery, '% battery')",
     ],
     4: [
         "Start from publish_example.py: copy it to sensor.py. Give your client an id starting with sensor-, "
@@ -62,7 +66,7 @@ HINTS = {
         "One tree that works: <enterprise>/<site>/<area>/<cell>/<class>/<device>, in lower case, "
         "for example adour/tarnos/curing/autoclave-1/machine/AC-1. Then N1 is adour/tarnos/curing/#.",
     ],
-    6: [
+    7: [
         "Two separate things: a retained message on lab/sensors/<name>/status saying online, "
         "and a last will on the same topic saying offline, retained too.",
         "The last will is set BEFORE connect(): c.will_set(STATUS, 'offline', qos=1, retain=True). "
@@ -70,7 +74,7 @@ HINTS = {
         "To die abruptly, stop sensor.py with Ctrl+C: Python closes the socket without sending DISCONNECT. "
         "Then look at the Clients tab of the viewer, and at mosquitto_sub -t 'lab/sensors/+/status' -v.",
     ],
-    7: [
+    8: [
         "Start your sensor with a short keepalive: c.connect(HOST, PORT, keepalive=15). "
         "Then, in the viewer's Clients tab, press Freeze on its connection.",
         "Keep a subscriber on lab/sensors/+/status running and note the time: the broker waits a while "
@@ -78,29 +82,29 @@ HINTS = {
         "The MQTT specification (3.1.1, section 3.1.2.10) says how long the broker waits: search for "
         "'one and a half times the Keep Alive'.",
     ],
-    8: [
-        "A bridge is a client that subscribes and publishes. Subscribe to the three sources "
-        "(hygrolab/CR-01/temperature, compressors/CMP1, application/adour-coldchain/device/+/event/up); "
-        "subscribe in on_connect, so that a reconnection subscribes again; in on_message, look at msg.topic to know which one arrived, "
-        "compute the clean value, and publish it on that device's topic from your tree.json.",
-        "The three conversions. Cleanroom: float(msg.payload), no timestamp in the message, so use the time "
-        "you received it. Compressor: json.loads, pressure_psi * 0.0689476 gives bar, and 'timestamp' is "
-        "seconds since 1970 (datetime.fromtimestamp(ts, timezone.utc)). Freezer: json.loads, "
-        "base64.b64decode(event['data']) gives 6 bytes, and struct.unpack('>BhBBB', raw) gives "
-        "(frame type, temperature in hundredths of a degree, humidity, battery, status); the time is in event['time'].",
+    6: [
+        "A bridge is a client that subscribes and publishes. Subscribe to the two sources "
+        "(compressors/CMP1 and application/adour-coldchain/device/+/event/up) in on_connect, so that a "
+        "reconnection subscribes again. In on_message, msg.topic tells you which one arrived: compute the clean "
+        "value and publish it on that device's topic from your tree.json.",
+        "The two conversions. Compressor: json.loads, pressure_psi * 0.0689476 gives bar, and 'timestamp' is "
+        "seconds since 1970: datetime.fromtimestamp(ts, timezone.utc).isoformat(). Freezer: your decode.py of "
+        "exercise 3, applied to event['data']; the time is already ISO 8601 in event['time']; the probe is named "
+        "in event['deviceInfo']['deviceName'].",
         "Skeleton:\n"
         "    TREE = json.load(open('/work/tree.json'))\n"
+        "    PROBES = {'frz1-probe-door': 'FRZ1-T1', 'frz1-probe-back': 'FRZ1-T2'}\n"
         "    def on_connect(c, u, flags, rc, props):\n"
-        "        for f in ('hygrolab/CR-01/temperature', 'compressors/CMP1',\n"
-        "                  'application/adour-coldchain/device/+/event/up'):\n"
-        "            c.subscribe(f)\n"
+        "        c.subscribe('compressors/CMP1')\n"
+        "        c.subscribe('application/adour-coldchain/device/+/event/up')\n"
         "    def on_message(c, u, msg):\n"
         "        if msg.topic == 'compressors/CMP1':\n"
         "            d = json.loads(msg.payload)\n"
         "            out = {'pressure_bar': round(d['pressure_psi'] * 0.0689476, 3),\n"
         "                   'measured_at': datetime.fromtimestamp(d['timestamp'], timezone.utc).isoformat()}\n"
         "            c.publish(TREE['CMP-1'], json.dumps(out))\n"
-        "        elif ...  # the cleanroom, then the freezer probes (map each probe's deviceName to FRZ1-T1 or FRZ1-T2)",
+        "        else:  # a ChirpStack event: decode it, then publish on TREE[PROBES[...]]\n"
+        "            ...",
     ],
 }
 

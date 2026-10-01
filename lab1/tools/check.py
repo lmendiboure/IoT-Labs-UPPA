@@ -32,14 +32,14 @@ OK, NO, INFO = "✔", "✘", "·"
 TITLES = {
     1: "The lab is running",
     2: "A message by hand, a subscription by hand",
-    3: "Measure the plant",
+    3: "Take a message apart",
     4: "Your virtual sensor",
     5: "A unified namespace for the plant",
-    6: "A retained status and a last will",
-    7: "A link that dies in silence",
-    8: "Build the bridge",
+    6: "Bridge two devices into your namespace",
+    7: "A retained status and a last will",
+    8: "A link that dies in silence",
 }
-CORE, DEEPER = [1, 2, 3, 4, 5, 6, 7], [8]
+CORE, DEEPER = [1, 2, 3, 4, 5, 6, 7, 8], []
 
 
 # ---------------------------------------------------------------- helpers
@@ -152,38 +152,49 @@ def ex3(out):
         raise Check("the relay has not seen enough of the plant yet: wait a minute")
     wrong = []
 
-    def expect(key, ok, hint):
+    def number(key):
         v = m.get(key)
-        if not isinstance(v, (int, float)):
+        if not isinstance(v, (int, float)) or isinstance(v, bool):
             wrong.append(f"{key}: missing or not a number")
-        elif not ok(v):
-            wrong.append(f"{key} = {v}: {hint}")
-        else:
-            out.append((OK, f"{key} = {v}"))
+            return None
+        return v
 
-    sizes = {p["payload_size"] for p in cr}
-    expect("cleanroom_payload_bytes", lambda v: v in sizes,
-           "not what the viewer shows for hygrolab/CR-01/temperature (payload column)")
+    def expect(key, ok, hint):
+        v = number(key)
+        if v is None:
+            return
+        if ok(v):
+            out.append((OK, f"{key} = {v}"))
+        else:
+            wrong.append(f"{key} = {v}: {hint}")
+
+    expect("cleanroom_topic_bytes", lambda v: v == len("hygrolab/CR-01/temperature"),
+           "count the characters of the topic itself")
     sizes = {p["size"] for p in cr}
     expect("cleanroom_packet_bytes", lambda v: v in sizes,
-           "not the size of the whole PUBLISH packet for that topic (packet column)")
+           "not the size of the whole PUBLISH packet for that topic (viewer, packet B)")
     lo, hi = min(p["payload_size"] for p in cs), max(p["payload_size"] for p in cs)
     expect("chirpstack_payload_bytes", lambda v: lo * 0.95 <= v <= hi * 1.05,
-           "not the payload size of a ChirpStack uplink event")
-    expect("sensor_data_bytes", lambda v: v == 6,
+           "not the payload size of a ChirpStack event")
+    expect("probe_frame_bytes", lambda v: v == 6,
            "decode the base64 'data' field and count the bytes")
-    window = 300
-    since = time.time() - window
-    recent = [p for p in pubs if p["t"] >= since and p["client"] in PLANT]
-    first = min((p["t"] for p in packets), default=time.time())
-    span = min(window, time.time() - first)
-    if span < 290:
-        wrong.append("plant_bytes_per_minute: the lab has been running for less than 5 minutes, "
-                     "so the Topics tab does not cover 5 minutes yet. Measure again in a moment")
-    else:
-        truth = sum(p["size"] for p in recent) / span * 60
-        expect("plant_bytes_per_minute", lambda v: 0.8 * truth <= v <= 1.2 * truth,
-               "more than 20 % away from what the relay measures now")
+    v = number("probe_temperature_c")
+    if v is not None:
+        orig = originals(packets)
+        recent = {d: [o[1] for o in orig[d] if o[0] >= time.time() - 900] for d in ("FRZ1-T1", "FRZ1-T2")}
+        if not recent["FRZ1-T1"]:
+            wrong.append("probe_temperature_c: no uplink of FRZ1-T1 in the last 15 minutes yet: wait a minute")
+        elif any(abs(v - x) < 0.006 for x in recent["FRZ1-T1"]):
+            out.append((OK, f"probe_temperature_c = {v}: FRZ1-T1 did send that"))
+        else:
+            why = "not a temperature FRZ1-T1 sent in the last 15 minutes"
+            if any(abs(v - x) < 0.006 for x in recent["FRZ1-T2"]):
+                why = "that is FRZ1-T2, the probe at the back; FRZ1-T1 is near the door"
+            elif any(abs(v - x * 100) < 1 for x in recent["FRZ1-T1"]):
+                why = "right bytes, but the unit is hundredths of a degree"
+            elif any(min(abs(v - (x * 100 + 65536)), abs(v - (x + 655.36))) < 0.1 for x in recent["FRZ1-T1"]):
+                why = "the temperature is a signed number"
+            wrong.append(f"probe_temperature_c = {v}: {why}")
     if wrong:
         raise Check("; ".join(wrong))
 
@@ -299,7 +310,7 @@ def ex5(out):
         raise Check("; ".join(problems))
 
 
-def ex6(out):
+def ex_status(out):
     import paho.mqtt.client as mqtt
     retained = {}
 
@@ -337,7 +348,7 @@ def ex6(out):
     out.append((OK, f"{died[-1]['client_id']} died abruptly at {hhmm(died[-1]['closed'])}"))
 
 
-def ex7(out):
+def ex_freeze(out):
     conns = api("/api/connections")
     frozen = [x for x in conns if (x["client_id"] or "").startswith("sensor-") and x["end"]
               and x["end"].startswith("frozen")]
@@ -357,7 +368,6 @@ def ex7(out):
 PSI_TO_BAR = 0.0689476
 PROBES = {"70b3d57ed0058a21": "FRZ1-T1", "70b3d57ed0058a37": "FRZ1-T2"}
 BRIDGED = [  # (devices, key the bridge must publish, tolerance, unit, where the plant publishes it)
-    (["CR-01"], "temperature_c", 0.051, "°C", "hygrolab/CR-01/temperature"),
     (["CMP-1"], "pressure_bar", 0.011, "bar", "compressors/CMP1"),
     (["FRZ1-T1", "FRZ1-T2"], "temperature_c", 0.051, "°C", "application/adour-coldchain/.../event/up"),
 ]
@@ -386,7 +396,7 @@ def originals(packets):
     return got
 
 
-def ex8(out):
+def ex_bridge(out):
     tree = load("tree.json")
     missing = [d for devs, *_ in BRIDGED for d in devs if not isinstance(tree.get(d), str)]
     if missing:
@@ -456,7 +466,7 @@ def ex8(out):
         raise Check("; ".join(problems))
 
 
-EXERCISES = {1: ex1, 2: ex2, 3: ex3, 4: ex4, 5: ex5, 6: ex6, 7: ex7, 8: ex8}
+EXERCISES = {1: ex1, 2: ex2, 3: ex3, 4: ex4, 5: ex5, 6: ex_bridge, 7: ex_status, 8: ex_freeze}
 
 
 # ---------------------------------------------------------------- running
@@ -495,7 +505,8 @@ def run(n, quiet=False):
     return ok, out, why
 
 
-REPORT_FILES = ["answers.txt", "measurements.json", "tree.json", "subscriptions.json", "sensor.py", "bridge.py"]
+REPORT_FILES = ["answers.txt", "measurements.json", "decode.py", "tree.json", "subscriptions.json",
+                "bridge.py", "sensor.py"]
 
 
 def banner(title):
@@ -511,7 +522,7 @@ def report():
     lines += banner("EXERCISES (as the checker sees them now)")
     for n in EXERCISES:
         ok, _, why = run(n, quiet=True)
-        name = f"{n}. {TITLES[n]}{' (deeper)' if n in DEEPER else ''}"
+        name = f"{n}. {TITLES[n]}"
         first = f"first passed at {hhmm(s[str(n)])}" if str(n) in s else "never passed"
         lines.append(f"{name:<48} {'passed' if ok else 'NOT YET':<8} {first}")
         if not ok:

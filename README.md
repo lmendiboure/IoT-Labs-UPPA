@@ -37,7 +37,7 @@ flowchart LR
 
 | Lab | The plant's problem | Layers | Protocols and standards | Status |
 |---|---|---|---|---|
-| [1](lab1/) | *Map the plant* — how do the data travel today? | all, through their messages | MQTT, unified namespace, ISA-95 | available |
+| [1](lab1/) | *Map the plant* — how do the data travel today? | all, through their messages | MQTT, a LoRaWAN uplink taken apart, unified namespace, ISA-95 | available |
 | 2 | *Never lose a cure record* — the autoclave's data must survive a failing link | edge ↔ platform | MQTT QoS 0/1/2, sessions, MQTT 5 | coming |
 | 3 | *Talk to the machines* — read the meters and the autoclave's controller directly | field ↔ edge | Modbus TCP, OPC UA, Sparkplug B | coming |
 | 4 | *Through the freezer wall* — long-range radio for the cold store | field ↔ networks | LoRaWAN: spreading factor, airtime, duty cycle | coming |

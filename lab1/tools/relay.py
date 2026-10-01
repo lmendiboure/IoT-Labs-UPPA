@@ -341,7 +341,9 @@ def totals(window):
         items = [p for p in packets if p["t"] >= since]
     up = sum(p["size"] for p in items if p["dir"] == "up")
     down = sum(p["size"] for p in items if p["dir"] == "down")
-    return {"window_s": window, "packets": len(items), "bytes_up": up, "bytes_down": down}
+    pubs = [p for p in items if p["dir"] == "up" and p["type"] == "PUBLISH"]
+    return {"window_s": window, "packets": len(items), "bytes_up": up, "bytes_down": down,
+            "publish_up": len(pubs), "publish_up_bytes": sum(p["size"] for p in pubs)}
 
 
 class Web(BaseHTTPRequestHandler):

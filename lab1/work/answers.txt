@@ -1,145 +1,131 @@
 LAB 1 — MAP THE PLANT — ANSWERS
 Team: (your names)
+Observations made on (day, time):
 
-Write each answer under its question, in plain text. Short and precise beats long: a figure with its
-unit, a small table, the source of what you looked up (a URL, a section number). Note the day and
-time of your observations: the plant has a rhythm.
+Plain text. Short and precise: a figure with its unit, a filled table, a reason in one sentence.
+Replace the ___ and fill the tables; add lines where you need them.
 
--- Q1. One device through the course's lenses -------------------------------------------------
+== Q1. Put names on the architecture ==========================================================
 
-Device chosen (freezer probe, autoclave or main energy meter):
-  sense:
-  compute:
-  power:
-  connect:
-  backhaul:
-  use:
-What I had to assume:
-The reference model I looked up, and how it cuts the chain differently:
-Sources:
+Device             | link to the next element | publishes on MQTT for it | client id | topic
+-------------------+--------------------------+--------------------------+-----------+---------------
+freezer probe T1   |                          |                          |           |
+cleanroom CR-01    |                          |                          |           |
+main energy meter  |                          |                          |           |
+autoclave          |                          |                          |           |
+CNC router         |                          |                          |           |
 
--- Q2. The architecture of this lab ------------------------------------------------------------
+(a) Why each of the four does not publish MQTT itself:
+  -
+  -
+  -
+  -
+(b) What goes wrong if a translator fails, that would not if the device published directly:
 
-Drawing (boxes and arrows in text are fine; or describe it):
+(c) The freezer probe in six blocks:
+  sense:            compute:            power:
+  connect:          backhaul:           use:
 
-The component that would not exist on a real site, and what would play its role:
-Why the broker's log shows the same address for every client:
+== Q2. The lab is not the plant ===============================================================
 
--- Q3. Five flows of the plant -----------------------------------------------------------------
+Address in the broker's log: ___, owned by the container ___. Why the same for every client:
 
-Observed on (day, time):
+What a real broker could no longer do properly behind such a relay:
 
-Flow A — cleanroom temperature, CR-01
-  publisher (client id):
-  topic:
-  payload format:
-  unit, time format:
-  period:
-  payload bytes / packet bytes:
-  QoS / retained:
-  who needs it, for what:
+What would see every packet in the real plant:
 
-Flow B — freezer probe near the door, FRZ1-T1
-  publisher (client id):
-  topic:
-  payload format:
-  unit, time format:
-  period:
-  payload bytes / packet bytes:
-  QoS / retained:
-  who needs it, for what:
+== Q3. Where do the bytes go? =================================================================
 
-Flow C — freezer door, FRZ1-DOOR
-  publisher (client id):
-  topic:
-  payload format:
-  unit, time format:
-  period:
-  payload bytes / packet bytes:
-  QoS / retained:
-  who needs it, for what:
+(a) fixed header ___ + topic length ___ + topic ___ + packet identifier ___ + payload ___ = ___ bytes
+    share of the measured value: ___ %
+(b) probe's data in the event: ___ of ___ bytes = ___ %
+    other information in the event      | who could use it
+    ------------------------------------+-----------------------------------
+                                        |
+                                        |
+                                        |
+(c) where the difference is added, and why it is acceptable there:
 
-Flow D — autoclave, AC-1
-  publisher (client id):
-  topic:
-  payload format:
-  unit, time format:
-  period:
-  payload bytes / packet bytes:
-  QoS / retained:
-  who needs it, for what:
+(d) two ways to deliver the same information in fewer bytes, and where each acts:
+  1.
+  2.
 
-Flow E — main energy meter, power, EM-MAIN
-  publisher (client id):
-  topic:
-  payload format:
-  unit, time format:
-  period:
-  payload bytes / packet bytes:
-  QoS / retained:
-  who needs it, for what:
+== Q4. Lost frames ============================================================================
 
--- Q4. Where do the bytes go? ------------------------------------------------------------------
+(a) fCnt | time | gateways that heard it
+    -----+------+-----------------------
+         |      |
+         |      |
+         |      |
+    What fCnt detects that timestamps do not:
+(b) fCnt 4120 then 4123:
+(c) the rule, and what to do when it fires:
+(d) why two gateways:
 
-Cleanroom packet, byte by byte:
-Share of the packet that is the value:
-Freezer probe event: share of the payload that is the probe's own data, and what the rest is:
-Two ways to send fewer bytes:
+== Q5. Two clients, one identifier ============================================================
 
--- Q5. Two clients, one identifier ------------------------------------------------------------
+(a) what happens (connections in 30 s: ___), and why:
+(b) in the plant; how ids are made unique:
+(c) id sent by mosquitto_pub: ___ ; what --help says: ___ ; who chose the id in the end:
 
-What happened:
-What the specification says (section):
-What it would mean in the plant, and how manufacturers avoid it:
-The client id of mosquitto_pub in exercise 2, and where it comes from:
+== Q6. What is wrong with the plant's topics? =================================================
 
--- Q6. What is wrong with the plant's topics? --------------------------------------------------
+   problem                    | seen in (topic or payload)     | what it breaks for a subscriber
+   ---------------------------+--------------------------------+---------------------------------
+1.                            |                                |
+2.                            |                                |
+3.                            |                                |
+4.                            |                                |
+5.                            |                                |
 
-(at least five problems, each with the trouble it causes to a subscriber)
-1.
-2.
-3.
-4.
-5.
-Why nobody can subscribe to "everything in the curing area" today:
+Why "everything in the curing area" is impossible today:
 
--- Q7. Your namespace, justified ---------------------------------------------------------------
+== Q7. Your namespace under stress ============================================================
 
-The order of the levels, and where ISA-95 helped:
-Why a measured value never belongs in a topic:
-The CNC router moves to a new cell:
-A need your namespace cannot serve with one filter:
+(a) order of the levels, and what ISA-95 gave:
+(b) filters for every temperature on the site:
+(c) CNC-1 moves to trimming-2 — needs unchanged: ___ ; who loses it, and the proposal:
+(d) the bridge stops for ten minutes:
 
--- Q8. What a newcomer receives ----------------------------------------------------------------
+== Q8. What a newcomer receives ===============================================================
 
-What arrives in the first second, and why:
-A case where retaining would be a mistake:
-How a retained message is deleted:
+(a)
+(b)
+(c) command:
 
--- Q9. How long before the broker notices? -----------------------------------------------------
+== Q9. How long before the broker notices? ====================================================
 
-Freeze at:            offline at:            delay:
-Explanation (specification section 3.1.2.10):
-DISCONNECT / Ctrl+C / frozen link — when is the will published?
-Radio wake-ups per hour with a 15 s keepalive, and what it costs a battery device:
+(a) frozen at ___, offline at ___, measured ___ s; predicted ___ s; why shorter:
+(b) ending          | will published? when?
+    ----------------+------------------------
+    DISCONNECT      |
+    Ctrl+C          |
+    frozen link     |
+(c) keepalive | wake-ups per hour | worst-case detection
+    ----------+-------------------+---------------------
+    15 s      |                   |
+    60 s      |                   |
+(d) keepalive for the cleanroom gateway, and why; what tells the plant a probe is dead:
 
--- Q10. Birth, death and goodbye of a gateway ---------------------------------------------------
+== Q10. Birth, death and goodbye of a gateway =================================================
 
-Why the status stayed offline, and the fix:
-The cleanroom gateway's status messages (topic, payload, QoS, retain):
-  when it starts:
-  its last will:
-  when it is shut down on purpose:
+(a) why offline, and the fix:
+(b) moment            | topic | payload | QoS | retained
+    ------------------+-------+---------+-----+---------
+    birth (when?)     |       |         |     |
+    last will         |       |         |     |
+    planned shutdown  |       |         |     |
+    the order of the last step, and why:
 
 
-===================================== ◆ DEEPER (optional) =====================================
+================================== ◆ DEEPER (optional) =======================================
 
--- D1. Why not HTTPS for the cleanroom? -------------------------------------------------------
+== D1. Why not HTTPS for the cleanroom? ==
 
--- D2. From one plant to the group ------------------------------------------------------------
+== D2. From one plant to the group ==
 
--- D3. What the broker says about itself -----------------------------------------------------
+== D3. What the broker says about itself ==
 
--- D4. Sparkplug B ---------------------------------------------------------------------------
+== D4. Sparkplug B ==
 
--- Exercise 8. Your bridge: what it does, and what you would add for the other devices --------
+== D5. The whole plant ==

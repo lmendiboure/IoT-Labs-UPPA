@@ -1,7 +1,7 @@
 {
-  "cleanroom_payload_bytes": null,
+  "cleanroom_topic_bytes": null,
   "cleanroom_packet_bytes": null,
   "chirpstack_payload_bytes": null,
-  "sensor_data_bytes": null,
-  "plant_bytes_per_minute": null
+  "probe_frame_bytes": null,
+  "probe_temperature_c": null
 }
