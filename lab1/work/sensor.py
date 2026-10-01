@@ -27,7 +27,7 @@ def reading():
     # TODO (exercise 4): return a dictionary with
     #   temperature_c  a number, around 20-23 °C (random.uniform is fine: the sensor is not real)
     #   humidity_pct   a number, around 40-55 %
-    #   measured_at    the time of the measurement, ISO 8601, in UTC (section K of the subject)
+    #   measured_at    the time of the measurement, ISO 8601, in UTC (docs/setup.md, "ten lines")
     return {}
 
 

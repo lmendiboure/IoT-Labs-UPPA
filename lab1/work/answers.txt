@@ -5,6 +5,11 @@ Observations made on (day, time):
 Plain text. Short and precise: a figure with its unit, a filled table, a reason in one sentence.
 Replace the ___ and fill the tables; add lines where you need them.
 
+Predictions — written BEFORE each part, never corrected afterwards; they are not graded on being right.
+  Part 2, bytes reaching the broker for one freezer reading:          lost reading recovered? yes / no
+  Part 4, subscriptions an energy dashboard needs today: ___   should need: ___
+  Part 5, delay before an application knows the cleanroom gateway died: ___   how it would know:
+
 == Q1. Put names on the architecture ==========================================================
 
 Device             | link to the next element | publishes on MQTT for it | client id | topic
@@ -116,6 +121,18 @@ Why "everything in the curing area" is impossible today:
     last will         |       |         |     |
     planned shutdown  |       |         |     |
     the order of the last step, and why:
+
+
+== Q11. What you tell Maialen (10 lines at most) ===============================================
+
+Can the plant prove every hour of the freezer and every cure cycle today?
+
+What prevents it (each point: what you measured or observed):
+
+The three changes you recommend first, in order:
+  1.
+  2.
+  3.
 
 
 ================================== ◆ DEEPER (optional) =======================================
