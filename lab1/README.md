@@ -56,7 +56,9 @@ The **core** is questions 1 to 10, exercises 1 to 8, and sections 3 and 4 of the
 
 **The questions.** Everything you need to answer the core questions is in this subject or on your
 screen: each part opens with the background it needs. Answer in **`work/answers.txt`**, which has a
-place for each question, often a table to fill. Each question says what it asks:
+place for each question, often a table to fill. You never write a program from an empty file either:
+`work/` holds a starter for each one, where the plumbing is written and `TODO` marks the part that
+needs thinking. Each question says what it asks:
 
 | Tag | You are asked to |
 |---|---|
@@ -371,9 +373,13 @@ Open `work/measurements.json` and replace each `null`:
 | `probe_frame_bytes` | the bytes the probe sent: the event's `data` field, base64-decoded |
 | `probe_temperature_c` | the temperature in one uplink of `FRZ1-T1` from the last 15 minutes, **decoded by you** from `data` |
 
-Which event is `FRZ1-T1`? The event names the probe in words. Decode in Python, in `work/decode.py`
-— you will reuse it in exercise 6 ([section K](#k-python-json-and-the-terminal-in-ten-lines) shows
-`base64` and `struct`). Then `check 3`; each key turns ✔ or says what is wrong. Stuck? `hint 3`.
+Which event is `FRZ1-T1`? The event names the probe in words.
+
+To decode, complete the two `TODO` of **`work/decode.py`**: turn the base64 text into bytes, and
+choose the `struct` format that matches the datasheet ([section K](#k-python-json-and-the-terminal-in-ten-lines)
+shows both). `python decode.py --test` checks your decoder against a frame whose content is known;
+then `python decode.py <data>` decodes any frame. Exercise 6 reuses it. Then `check 3`: each key
+turns ✔ or says what is wrong. Stuck? `hint 3`.
 
 > **Question 3 — Where do the bytes go?** · `See` · *count the bytes (L3, parts 5 and 6)*
 >
@@ -446,13 +452,15 @@ Run the example, and find its packets in the viewer (`CONNECT`, `CONNACK`, `PUBL
 python publish_example.py
 ```
 
-Copy it to `sensor.py` and turn it into a sensor that:
+Then open **`work/sensor.py`**: connection, loop and publication are written; complete the `TODO`
+marked *exercise 4*, so that the sensor:
 
 - connects with the client id `sensor-<name>`, for example `sensor-alice`;
 - publishes every 2 to 10 seconds on `lab/sensors/<name>/env`;
 - sends JSON with `temperature_c` and `humidity_pct` (numbers) and `measured_at` (ISO 8601, UTC), for
-  example `{"temperature_c": 20.4, "humidity_pct": 46, "measured_at": "2026-09-30T13:28:21+00:00"}`;
-- runs until you stop it.
+  example `{"temperature_c": 20.4, "humidity_pct": 46, "measured_at": "2026-09-30T13:28:21+00:00"}`.
+
+The `TODO` marked *exercise 7* wait for Part 5.
 
 Run it (`python sensor.py`), wait a minute, `check 4`. **You should see:**
 
@@ -530,8 +538,10 @@ take no wildcards, spaces, empty levels, leading or trailing `/`, and do not sta
 
 ### Exercise 6 — Bridge two devices into your namespace
 
-Write `work/bridge.py`, a client with the id `bridge-<name>` that subscribes to two vendor flows and
-republishes them, cleaned, on the devices' topics from your `tree.json`:
+Complete **`work/bridge.py`**: a client with the id `bridge-<name>` that subscribes to two vendor
+flows and republishes them, cleaned, on the devices' topics from your `tree.json`. The plumbing is
+written — connection, dispatch of each message, publication on the right topic; the `TODO` are what
+makes a bridge: the subscriptions, the identity of the probes, and the two conversions.
 
 | Device | The plant publishes | Your bridge publishes |
 |---|---|---|
@@ -540,7 +550,7 @@ republishes them, cleaned, on the devices' topics from your `tree.json`:
 
 Rules of the clean namespace: values in the site's units, °C and bar (1 psi = 0.0689476 bar), with at
 least two decimals; `measured_at` in ISO 8601 **with its time zone**, from the device's own time; any
-extra field welcome (`humidity_pct`, `battery_pct`, `state`…). Reuse your `decode.py`.
+extra field welcome (`humidity_pct`, `battery_pct`, `state`…).
 
 Run it, leave it two minutes so that both probes speak, then `check 6`. The checker compares the last
 value you published for each device with what the plant published just before, and recognises a
@@ -611,9 +621,10 @@ as the last will.
 
 ### Exercise 7 — A retained status and a last will
 
-Improve `sensor.py`: right after connecting, it publishes `online` on `lab/sensors/<name>/status`,
-**retained**; it registers a **last will**, `offline` on the same topic, retained too (set it *before*
-connecting). Watch the status in a second terminal:
+Complete the two `TODO` of `sensor.py` marked *exercise 7*: right after connecting, the sensor
+publishes `online` on `lab/sensors/<name>/status`, **retained**; and it registers a **last will**,
+`offline` on the same topic, retained too. Mind where the will goes. Watch the status in a second
+terminal:
 
 ```bash
 mosquitto_sub -h relay -p 1884 -t 'lab/sensors/+/status' -v
@@ -638,7 +649,7 @@ Ctrl+C is a gentle death: the operating system still closes the connection. A de
 fades or whose power is cut closes nothing. The viewer's **Freeze** button imitates it: the relay stops
 forwarding anything on a connection, without closing it.
 
-Start your sensor with `keepalive=15`, keep the status subscription running, note the time, and press
+Start your sensor with a keepalive of 15 s (`KEEPALIVE_S`), keep the status subscription running, note the time, and press
 **Freeze** on your sensor's connection in the *Clients* tab. Note the time when `offline` appears.
 Then `check 8`:
 

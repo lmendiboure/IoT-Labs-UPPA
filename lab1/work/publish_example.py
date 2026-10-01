@@ -2,7 +2,7 @@
 
     python publish_example.py
 
-Copy it to sensor.py for exercise 4.
+Exercise 4 starts from sensor.py, which works the same way.
 """
 import os
 
