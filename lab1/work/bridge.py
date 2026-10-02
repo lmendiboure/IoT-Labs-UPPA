@@ -2,8 +2,8 @@
 
     python bridge.py          stop it with Ctrl+C
 
-It subscribes to the vendors' topics, normalizes each message, and publishes it on the device's topic
-from your tree.json. Everything marked TODO is yours to write.
+It subscribes to vendor topics, normalizes each message, and republishes it in the common topic
+hierarchy chosen during the lab. Everything marked TODO is yours to write.
 """
 import json
 import os
@@ -15,9 +15,14 @@ from decode import decode           # your freezer payload decoder
 
 HOST = os.getenv("MQTT_HOST", "relay")
 PORT = int(os.getenv("MQTT_PORT", "1884"))
-TREE = json.load(open(os.path.join(os.getenv("WORK", "/work"), "tree.json")))
-
 NAME = "alice"                      # TODO: your name
+
+# TODO: choose output topics consistent with the hierarchy you proposed in Q11.
+OUTPUT_TOPICS = {
+    "CMP-1": "",
+    "FRZ1-T1": "",
+    "FRZ1-T2": "",
+}
 PSI_TO_BAR = 0.0689476
 
 # Which ChirpStack device is which probe of the inventory? The event names each probe in words.
@@ -59,8 +64,8 @@ def on_message(client, userdata, msg):
     if device is None:
         print("unknown device, ignored:", msg.topic)
         return
-    client.publish(TREE[device], json.dumps(clean), qos=1)
-    print(device, "->", TREE[device], clean)
+    client.publish(OUTPUT_TOPICS[device], json.dumps(clean), qos=1)
+    print(device, "->", OUTPUT_TOPICS[device], clean)
 
 
 c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"bridge-{NAME}")
