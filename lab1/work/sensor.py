@@ -2,7 +2,8 @@
 
     python sensor.py          stop it with Ctrl+C
 
-Everything marked TODO is yours to write. The rest works as it is.
+The measurement generation is already implemented. In Part 6 you will only add the two MQTT
+operations that implement the online/offline status.
 """
 import json
 import os
@@ -15,29 +16,29 @@ import paho.mqtt.client as mqtt
 HOST = os.getenv("MQTT_HOST", "relay")
 PORT = int(os.getenv("MQTT_PORT", "1884"))
 
-NAME = "alice"                                  # TODO: your name, in lower case
+NAME = "student"
 TOPIC = f"lab/sensors/{NAME}/env"
 STATUS = f"lab/sensors/{NAME}/status"
-PERIOD_S = 5                                    # seconds between two messages (2 to 10)
+PERIOD_S = 5
 KEEPALIVE_S = 60                                # later set to 15 s
 
 
 def reading():
-    """One measurement, as the dictionary the sensor will publish."""
-    # TODO: return a dictionary with
-    #   temperature_c  a number, around 20-23 °C (random.uniform is fine: the sensor is not real)
-    #   humidity_pct   a number, around 40-55 %
-    #   measured_at    the time of the measurement, ISO 8601, in UTC
-    return {}
+    """Generate one plausible environmental measurement."""
+    return {
+        "temperature_c": round(random.uniform(20.0, 23.0), 2),
+        "humidity_pct": round(random.uniform(40.0, 55.0), 1),
+        "measured_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
 
 
 c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"sensor-{NAME}")
 
 # PART 6 TODO: register the last will — 'offline' on STATUS, retained.
-#   It travels in the CONNECT packet: where must this line be, then?
+# It must be configured before connect().
 
 c.connect(HOST, PORT, keepalive=KEEPALIVE_S)
-c.loop_start()                                  # the network runs in a background thread
+c.loop_start()
 
 # PART 6 TODO: publish 'online' on STATUS, retained.
 

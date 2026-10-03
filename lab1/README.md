@@ -398,22 +398,28 @@ In the viewer, filter on:
 application/adour-coldchain/device/
 ```
 
-Open one recent event whose `deviceInfo.deviceName` is `frz1-probe-door`. Locate its `data` field.
-That base64 string represents these six bytes:
+Open one recent event whose `deviceInfo.deviceName` is `frz1-probe-door` and locate its `data` field.
+That field is base64 text; after decoding the base64, the probe payload contains exactly six bytes:
 
 | Byte | 0 | 1–2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|
 | Content | frame type `0x11` | temperature, hundredths of °C, **signed**, big-endian | humidity % | battery % | status |
 
-Complete the two `TODO` in `work/decode.py`: decode the base64 text into bytes, then unpack the
-6-byte structure above. The script already contains a small local test:
+`work/decode.py` already converts the base64 text into a six-byte Python `bytes` object. Complete only
+the interpretation of those bytes. In Python, `raw[n]` reads one byte as an unsigned integer; the
+two-byte signed temperature can be interpreted with `int.from_bytes(..., byteorder="big", signed=True)`.
+The indices to use come directly from the table above.
+
+Run the provided example first:
 
 ```bash
 python decode.py --test
 ```
 
-Then give it the `data` value from the real `FRZ1-T1` event and check that the resulting temperature,
-humidity and battery values are plausible.
+The known frame is also printed in hexadecimal (`11 f8 98 1c 57 00`), which makes it possible to relate
+the code directly to the six positions in the table. Once the test passes, give the script the `data`
+value from a real `FRZ1-T1` event and check that the decoded temperature, humidity and battery values
+are plausible.
 
 ### Q5 — What information did the probe itself produce?
 
@@ -586,7 +592,7 @@ distinguish clients that connect to it; **it is not, by itself, proof of the phy
 The lab already includes **Paho**, a Python MQTT client library. A minimal publisher using it looks like this:
 
 ```python
-c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="sensor-alice")
+c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="sensor-student")
 c.connect("relay", 1884)
 c.loop_start()
 c.publish("some/topic", "some payload")
@@ -599,13 +605,9 @@ that identifier.
 ### Add a virtual sensor
 
 From a `workstation` shell, run `python publish_example.py` once and identify its `CONNECT`, `PUBLISH` and `DISCONNECT` packets in
-the viewer. Then open `work/sensor.py`. For now, complete only the `NAME` and `reading()` TODOs; the two
-status/last-will TODOs are intentionally left for Part 6. The simulated sensor should:
-
-- use your name in its client id and topic;
-- publish `temperature_c`, `humidity_pct` and `measured_at` as JSON;
-- represent `measured_at` as an ISO 8601 timestamp in UTC;
-- publish every 5 s on `lab/sensors/<name>/env`.
+the viewer. Then open `work/sensor.py`. The measurement generation is already implemented: the script
+publishes a JSON measurement every 5 s on `lab/sensors/student/env` using the MQTT client id
+`sensor-student`. The two status/last-will lines are intentionally left for Part 6.
 
 Run it from a `workstation` shell:
 
@@ -618,13 +620,13 @@ Let several messages appear and inspect one of them in the viewer.
 ### Q9 — Observe what happens when two connections reuse one client id
 
 Keep your first `sensor.py` running. From a second `workstation` shell, start a second copy without
-changing `NAME`. Filter the viewer on `sensor-<name>`, then watch the **Clients** tab and both terminals
+changing `NAME`. Filter the viewer on `sensor-student`, then watch the **Clients** tab and both terminals
 for roughly 30 seconds.
 
 Describe the sequence you observe when the two processes repeatedly try to use the same client id,
 and relate it to the MQTT rule given above. Then distinguish two statements:
 
-1. what `sensor-<name>` allows the broker to distinguish;
+1. what `sensor-student` allows the broker to distinguish;
 2. what seeing that client id does **not** establish about the identity of the physical sender.
 
 <details>
@@ -633,7 +635,7 @@ and relate it to the MQTT rule given above. Then distinguish two statements:
 Repeat the duplicate-client experiment from Q9, but this time pretend that the two programs are remote
 devices and do **not** use their terminal output as evidence. Start the first copy, wait until it has
 published normally, then start the second copy about ten seconds later. In the viewer, filter on
-`sensor-<name>` and use both **Packets** and **Clients**.
+`sensor-student` and use both **Packets** and **Clients**.
 
 Build a diagnosis from observations only. Identify at least two concrete symptoms of the collision
 (for example repeated connections with the same client id, interruptions in the publication stream,
@@ -655,12 +657,11 @@ environmental topic** from another MQTT client:
 ```bash
 NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 mosquitto_pub -h relay -p 1884 -i another-client \
-  -t 'lab/sensors/<name>/env' \
+  -t 'lab/sensors/student/env' \
   -m "{\"temperature_c\":21.5,\"humidity_pct\":45,\"measured_at\":\"$NOW\"}"
 ```
 
-Replace `<name>` with the name used by your sensor. The injected values are deliberately plausible so
-that the payload does not trivially reveal the substitution. In the viewer, compare the two `PUBLISH`
+The injected values are deliberately plausible so that the payload does not trivially reveal the substitution. In the viewer, compare the two `PUBLISH`
 packets: the topic claims the same application-level sensor while the MQTT client ids are different.
 
 Now distinguish three identities: the physical or virtual asset, the MQTT client connection, and the
@@ -748,19 +749,20 @@ That translation is useful, but it is not neutral: once the bridge converts psi 
 timestamp or renames a field, those choices become part of the meaning and lineage of the resulting
 data.
 
-Complete `work/bridge.py` in two passes rather than implementing every source at once.
+`work/bridge.py` already contains the MQTT callbacks, JSON parsing, timestamp conversion and the
+freezer decoding call. The remaining edits correspond directly to decisions made in the lab rather
+than to Python plumbing. Complete it in two passes.
 
-**First, normalize only the compressor.** Choose an output topic consistent with the hierarchy from
-Q11, subscribe to `compressors/CMP1`, convert `pressure_psi` to `pressure_bar`, and convert the
-compressor's Unix `timestamp` (seconds since 1970) to an ISO 8601 `measured_at` with a time zone. Use
-`1 psi = 0.0689476 bar` and keep at least two decimals. Run the bridge and confirm in the viewer that
-you can place one original compressor message beside its normalized output.
+**First, normalize only the compressor.** Choose its output topic from your Q11 hierarchy and replace
+the single `pressure_bar = None` line with the psi-to-bar conversion. The compressor input topic and
+Unix-to-ISO timestamp conversion are already provided. Use `1 psi = 0.0689476 bar` and keep at least
+two decimals. Run the bridge and confirm in the viewer that you can place one original compressor
+message beside its normalized output.
 
-**Then add the freezer probes.** The mapping between plant identifiers (`FRZ1-T1`, `FRZ1-T2`) and
-ChirpStack `deviceName` values is already provided in both `inventory.json` and the starter code. Use
-your decoder from Part 3 to extract `temperature_c`, and use the ChirpStack network-server reception
-time as `measured_at` because the probes themselves have no clock. Choose output topics consistent
-with the same hierarchy as the compressor.
+**Then add the freezer probes.** Choose their two output topics and set `FREEZER_INPUT` to one MQTT
+wildcard filter matching the two ChirpStack uplink topics. The mapping between plant identifiers
+(`FRZ1-T1`, `FRZ1-T2`) and ChirpStack `deviceName` values is provided, and the starter code already
+calls your decoder from Part 3 and uses the ChirpStack reception time as `measured_at`.
 
 | Device | Existing message | Message produced by your bridge |
 |---|---|---|
@@ -781,7 +783,7 @@ for the compressor. Once that path works, add the freezer path and check it in t
 Choose one compressor message and one `FRZ1-T1` message for which you can also find the corresponding
 output from your bridge. Use the source timestamp to pair them: the compressor's Unix `timestamp`
 becomes your ISO `measured_at`, while the freezer event's ChirpStack `time` becomes its output
-`measured_at`. Filtering the viewer on `bridge-<name>` helps isolate the republished messages. Keep the
+`measured_at`. Filtering the viewer on `bridge-student` helps isolate the republished messages. Keep the
 input/output pairs together so that you are comparing the same observation.
 
 For each output field produced by the bridge, determine whether it is:
@@ -873,9 +875,9 @@ c.connect(HOST, PORT, keepalive=KEEPALIVE_S)
 c.publish(STATUS, "online", retain=True)
 ```
 
-Complete the two status-related `TODO` in `sensor.py`:
+Complete the only two remaining `TODO` lines in `sensor.py`:
 
-- before connecting, register `offline` as a retained last will on `lab/sensors/<name>/status`;
+- before connecting, register `offline` as a retained last will on `lab/sensors/student/status`;
 - after connecting, publish `online` on the same topic and retain that status.
 
 Observe the status from another terminal:
@@ -942,7 +944,7 @@ the sensor normally to restore the connection and its retained status.
 
 ```bash
 mosquitto_pub -h relay -p 1884 -i status-test -r \
-  -t 'lab/sensors/<name>/status' -m 'offline'
+  -t 'lab/sensors/student/status' -m 'offline'
 ```
 
 Verify that environmental messages continue while a new status subscriber immediately receives

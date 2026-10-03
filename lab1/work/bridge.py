@@ -1,9 +1,9 @@
-"""bridge.py — republishes two of the plant's devices in your plant namespace.
+"""bridge.py — republish two plant sources in a common topic hierarchy.
 
     python bridge.py          stop it with Ctrl+C
 
-It subscribes to vendor topics, normalizes each message, and republishes it in the common topic
-hierarchy chosen during the lab. Everything marked TODO is yours to write.
+The MQTT callback plumbing and timestamp conversion are already implemented. The remaining edits are
+limited to the design choices made in the lab: output topics, one MQTT filter, and one unit conversion.
 """
 import json
 import os
@@ -11,65 +11,81 @@ from datetime import datetime, timezone
 
 import paho.mqtt.client as mqtt
 
-from decode import decode           # your freezer payload decoder
+from decode import decode
 
 HOST = os.getenv("MQTT_HOST", "relay")
 PORT = int(os.getenv("MQTT_PORT", "1884"))
-NAME = "alice"                      # TODO: your name
 
-# STEP 1: choose the compressor output topic from your Q11 hierarchy.
-# STEP 2: add the two freezer output topics using the same hierarchy.
+# Choose output topics consistent with the hierarchy proposed in Q11.
 OUTPUT_TOPICS = {
-    "CMP-1": "",
-    "FRZ1-T1": "",
-    "FRZ1-T2": "",
+    "CMP-1": "",       # TODO: compressor output topic
+    "FRZ1-T1": "",     # TODO: freezer probe output topic
+    "FRZ1-T2": "",     # TODO: freezer probe output topic
 }
+
+COMPRESSOR_INPUT = "compressors/CMP1"
+FREEZER_INPUT = ""      # TODO in step 2: one wildcard filter for all cold-chain uplinks
+
 PSI_TO_BAR = 0.0689476
 
-# Plant identifier <-> ChirpStack deviceName mapping (also documented in inventory.json).
+# Plant identifier <-> ChirpStack deviceName mapping.
 PROBES = {
     "frz1-probe-door": "FRZ1-T1",
     "frz1-probe-back": "FRZ1-T2",
 }
 
 
+def unix_to_iso(seconds):
+    """Convert Unix seconds to an ISO 8601 UTC timestamp."""
+    return datetime.fromtimestamp(seconds, tz=timezone.utc).isoformat()
+
+
 def compressor(d):
-    """compressors/CMP1, already parsed from JSON -> the clean message of CMP-1."""
-    # STEP 1 TODO: pressure_bar (from pressure_psi, at least two decimals) and measured_at
-    #       (ISO 8601 with its time zone, from the device's own 'timestamp': seconds since 1970).
-    #       Add any field you find useful.
-    return {}
+    """Normalize one compressor message."""
+    # TODO: replace None with the pressure converted from psi to bar, rounded to 2 decimals.
+    pressure_bar = None
+    return {
+        "pressure_bar": pressure_bar,
+        "measured_at": unix_to_iso(d["timestamp"]),
+    }
 
 
 def probe(event):
-    """A ChirpStack uplink event, already parsed from JSON -> the clean message of the probe."""
-    # STEP 2 TODO: temperature_c from the 6-byte application payload in event["data"] (use decode()),
-    #       measured_at: the probe has no clock — the best time is the network server's reception
-    #       time, event["time"]. Add any field you find useful (fCnt, battery...).
-    return {}
+    """Normalize one ChirpStack freezer uplink."""
+    values = decode(event["data"])
+    return {
+        "temperature_c": values["temperature_c"],
+        "measured_at": event["time"],
+    }
 
 
 def on_connect(client, userdata, flags, reason_code, properties):
-    # Subscribing here, not after connect(): a reconnection then subscribes again.
-    # STEP 1 TODO: subscribe to the compressor topic.
-    # STEP 2 TODO: also subscribe to every ChirpStack uplink of the cold chain (one wildcard filter).
-    pass
+    client.subscribe(COMPRESSOR_INPUT)
+    if FREEZER_INPUT:
+        client.subscribe(FREEZER_INPUT)
 
 
 def on_message(client, userdata, msg):
     d = json.loads(msg.payload)
-    if msg.topic == "compressors/CMP1":
+    if msg.topic == COMPRESSOR_INPUT:
         device, clean = "CMP-1", compressor(d)
     else:
-        device, clean = PROBES.get(d["deviceInfo"]["deviceName"]), probe(d)
-    if device is None:
-        print("unknown device, ignored:", msg.topic)
+        device = PROBES.get(d["deviceInfo"]["deviceName"])
+        if device is None:
+            print("unknown device, ignored:", msg.topic)
+            return
+        clean = probe(d)
+
+    output = OUTPUT_TOPICS[device]
+    if not output:
+        print("no output topic configured for", device)
         return
-    client.publish(OUTPUT_TOPICS[device], json.dumps(clean))
-    print(device, "->", OUTPUT_TOPICS[device], clean)
+
+    client.publish(output, json.dumps(clean))
+    print(device, "->", output, clean)
 
 
-c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"bridge-{NAME}")
+c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="bridge-student")
 c.on_connect = on_connect
 c.on_message = on_message
 c.connect(HOST, PORT, keepalive=30)
