@@ -347,11 +347,14 @@ would make every later publication appear once more on its way back to that subs
 
 ## Part 3 — Follow one freezer reading end to end
 
-The freezer path is the first one in which the physical sensor is several steps away from MQTT. Focus
-on a single device, `FRZ1-T1`, and build the chain before looking at the details of its messages.
+The freezer is the first device in the lab whose data takes a longer path before reaching MQTT. Rather
+than introducing every detail at once, follow one measurement from `FRZ1-T1` and add one piece of the
+path at a time.
 
-`FRZ1-T1` is a battery-powered temperature **probe**, i.e. the physical sensor placed inside the
-freezer. It does **not** run MQTT. Instead, one measurement travels through the following chain:
+### First locate the measurement path
+
+`FRZ1-T1` is the battery-powered temperature **probe** placed near the freezer door. The probe does
+not speak MQTT. Its measurements reach the broker through this chain:
 
 ```mermaid
 flowchart LR
@@ -360,88 +363,34 @@ flowchart LR
     NS -- "MQTT / JSON" --> B[("MQTT broker")]
 ```
 
-The names in this chain refer to different roles:
+Only three new roles are needed for now:
 
-- **LoRaWAN** is the low-power wide-area networking technology used on the radio link from the probe.
-  It is designed for small messages from constrained devices over relatively long distances.
-- a **LoRaWAN gateway** receives radio transmissions and forwards the received frames over an IP
-  network. It is the bridge between the radio side and the network side;
-- **ChirpStack** is the LoRaWAN network-server software used in this lab. It processes received
-  LoRaWAN uplinks and exposes the resulting events to applications, here through MQTT.
+- **LoRaWAN** is the low-power radio technology used by the probe;
+- a **LoRaWAN gateway** hears the radio transmission and forwards it over IP;
+- **ChirpStack** is the LoRaWAN network server used in the lab. It receives the forwarded radio data
+  and exposes an application event through MQTT.
 
-An **uplink** is simply a transmission travelling from the end device toward the network. At this
-stage, the important distinction is between the application data produced by the probe and the larger
-LoRaWAN frame that carries those data over the radio.
-
-Open another shell in the `workstation` container and leave the uplink monitor running during this part:
+A transmission from the probe toward the network is called an **uplink**. Open a spare
+`workstation` shell and run:
 
 ```bash
 docker compose exec workstation bash
 python watch_uplinks.py
 ```
 
-The `paho-mqtt` Python package used by this script is already installed in the `workstation` container; no Python package needs to be installed on the VM itself.
+Leave it running. Each line corresponds to one freezer uplink that ChirpStack has accepted. At this
+point, just make sure that you can see the two probes appear periodically. The columns `fCnt` and
+`gateways` will be used later; there is no need to interpret them yet.
 
-For each received uplink, it prints the network-server reception time, the probe name, a LoRaWAN
-frame counter (`fCnt`) and the number of gateways that received the radio transmission. Watch a few
-successive lines before going further.
+In ChirpStack, `FRZ1-T1` is named `frz1-probe-door` and `FRZ1-T2` is named `frz1-probe-back`. These
+are two names for the same physical devices at different layers of the system.
 
-One radio transmission can be heard by more than one gateway. Those gateways forward copies of the
-same transmission to ChirpStack; the network server recognises the duplicates and exposes a single
-application event. The more detailed path is therefore:
+### Decode what the probe actually sent
 
-```mermaid
-flowchart LR
-    P["FRZ1-T1<br/>probe"] -- "same radio transmission" --> G1["gateway 1"]
-    P -- "same radio transmission" --> G2["gateway 2"]
-    G1 -- "frame + reception metadata" --> NS["ChirpStack<br/>network server"]
-    G2 -- "frame + reception metadata" --> NS
-    NS -- "one MQTT PUBLISH<br/>JSON event" --> B[("broker")]
-```
-
-The probe wakes once a minute, measures, transmits and sleeps. The application payload it creates is
-only **6 bytes**. LoRaWAN adds its own protocol information around those bytes, so the transmitted
-LoRaWAN frame is larger; the complete physical radio transmission is larger again. In what follows,
-`6 bytes` always refers to the **application payload produced by the probe**, not to the full radio
-frame.
-
-The counter `fCnt` belongs to LoRaWAN. It increases across successive uplinks from a device, which
-means that a jump in the counter can reveal that the sequence observed by the network server is
-incomplete. It does not, by itself, tell you where a missing transmission disappeared.
-
-To make that phenomenon observable during a lab session, the simulator deliberately suppresses one
-out of every four probe uplinks before it reaches ChirpStack. This **25% loss rate is intentionally
-exaggerated for teaching**; it is not presented as a realistic target for a LoRaWAN deployment. The
-frame counter is still incremented for the suppressed uplink, so the next received event exposes a
-gap. Because `watch_uplinks.py` is started before the decoding work below, a gap should normally be
-visible by the time you reach Q7.
-
-ChirpStack publishes the received uplink as a JSON event. The original 6 binary bytes cannot be placed
-directly in ordinary JSON text, so they appear in the `data` field using **base64**, an encoding that
-represents arbitrary bytes as text. The event also contains information that did not come from those
-six application bytes, such as network-server reception time and gateway reception metadata.
-
-The probe's 6-byte application payload is defined as follows:
-
-| Byte | 0 | 1–2 | 3 | 4 | 5 |
-|---|---|---|---|---|---|
-| Content | frame type `0x11` | temperature, hundredths of °C, **signed**, big-endian | humidity % | battery % | status |
-
-Later in this part you will also compare this compact binary payload with a normal MQTT publication.
-For reference, an MQTT 3.1.1 `PUBLISH` packet contains, in simplified form:
-
-| Part | Bytes | Content |
-|---|---:|---|
-| fixed header | 1 | identifies the packet as a `PUBLISH` |
-| remaining length | 1–4 | size of what follows |
-| topic length | 2 | length of the topic |
-| topic | n | UTF-8 topic |
-| payload | rest | application message |
-
-The viewer's `packet B` value is the size of this **MQTT packet only**. It does not include TCP, IP or
-link-layer headers.
-
-### Decode one freezer payload
+The physical probe does not send JSON. To save radio airtime and energy, it packs its application data
+into only **6 bytes**. ChirpStack later places those bytes inside a JSON MQTT event. Because arbitrary
+binary bytes cannot be written directly as ordinary JSON text, the event carries them in the `data`
+field using **base64**, a text representation of binary data.
 
 In the viewer, filter on:
 
@@ -449,94 +398,141 @@ In the viewer, filter on:
 application/adour-coldchain/device/
 ```
 
-Open one recent uplink from `FRZ1-T1` and locate its JSON `data` field. Complete the two `TODO` in
-`work/decode.py`: first convert the base64 text into bytes, then unpack the 6-byte structure described
-above.
+Open one recent event whose `deviceInfo.deviceName` is `frz1-probe-door`. Locate its `data` field.
+That base64 string represents these six bytes:
 
-Test the decoder with:
+| Byte | 0 | 1–2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| Content | frame type `0x11` | temperature, hundredths of °C, **signed**, big-endian | humidity % | battery % | status |
+
+Complete the two `TODO` in `work/decode.py`: decode the base64 text into bytes, then unpack the
+6-byte structure above. The script already contains a small local test:
 
 ```bash
 python decode.py --test
 ```
 
-Then pass the `data` value from a real `FRZ1-T1` event to the script and verify that the decoded values are plausible.
+Then give it the `data` value from the real `FRZ1-T1` event and check that the resulting temperature,
+humidity and battery values are plausible.
 
-### Q5 — Compare a compact sensor payload with an MQTT representation
+### Q5 — What information did the probe itself produce?
 
-Take one real `hygrolab/CR-01/temperature` `PUBLISH` packet from the viewer and account for its bytes:
-the complete MQTT packet, the topic and its length, and the textual payload. Use the simplified packet
-structure above to explain the difference between the useful temperature characters and everything
-needed to transport and identify them.
+Use the single `FRZ1-T1` event you have just decoded. Keep the six decoded bytes and the resulting
+physical values side by side.
 
-Now compare this with the freezer probe, where the whole application payload is only six bytes and
-several physical quantities are packed together. Compute the fraction of your cleanroom MQTT packet
-occupied by the temperature text itself, but do not stop at the ratio. The two representations live
-on very different links and serve different purposes. Explain why spending more bytes on a readable,
-self-describing representation after reaching the IP network can be a reasonable architectural choice
-even if the battery-powered radio link is kept compact.
+Identify exactly which information is encoded by the probe in those six bytes. In particular, decide
+whether the payload itself contains the device name, a measurement timestamp or any information about
+which gateway received it. For the temperature field, explain how the two bytes become a signed value
+in degrees Celsius; you may use one concrete decoded example rather than describing the conversion
+only in general terms.
 
-### Q6 — Determine where meaning and metadata are introduced
+The objective here is simply to establish the boundary of the **sensor payload**: what the physical
+probe knows and sends before the rest of the infrastructure adds anything around it.
 
-Use the **same real `FRZ1-T1` event** you decoded above. Put the decoded probe values next to the corresponding ChirpStack JSON event and compare them.
+### Now look at what the infrastructure adds
 
-Identify at least three useful pieces of information present in the JSON but absent from the six
-bytes produced by the probe. For each one, state which component in the path can know or add it and
-give one reason an application might use it.
+Return to the complete ChirpStack JSON event containing those same six bytes. The JSON is much richer
+than the probe payload because other components know things that the probe does not.
 
-Finally, identify where the knowledge *"bytes 1–2 are a signed big-endian temperature in hundredths
-of a degree"* must reside. Explain what value applications would obtain if the probe firmware changed
-that binary format while the decoder continued to use the old one.
+A single LoRaWAN transmission can also be heard by more than one gateway. Each gateway forwards its
+reception to ChirpStack; the network server recognises that they concern the same uplink and exposes
+one application event containing reception metadata.
+
+```mermaid
+flowchart LR
+    P["FRZ1-T1<br/>one radio uplink"] --> G1["gateway 1"]
+    P --> G2["gateway 2"]
+    G1 -- "reception + metadata" --> NS["ChirpStack"]
+    G2 -- "reception + metadata" --> NS
+    NS -- "one JSON event" --> B[("MQTT broker")]
+```
+
+The number printed in the `gateways` column of `watch_uplinks.py` is the number of gateway receptions
+reported for that event.
+
+### Q6 — What was added after the radio transmission?
+
+Stay with the same `FRZ1-T1` event. Compare the six decoded application bytes with the surrounding
+ChirpStack JSON.
+
+Find at least three useful pieces of information that are present in the JSON but were **not** present
+in the six bytes sent by the probe. For each one:
+
+1. point to the corresponding JSON field;
+2. identify which part of the path can know or create that information;
+3. give one reason why an application might care about it.
+
+Then return to the binary temperature format used in Q5. Somewhere in the system, software must know
+that bytes 1–2 mean a signed big-endian temperature in hundredths of a degree. Identify where that
+knowledge is used in this lab. What would happen if a future probe firmware changed the encoding but
+the decoder was not updated?
+
+At this point you should be able to separate two things clearly: **the measurement produced by the
+probe** and **the context added by the communication infrastructure**.
+
+### Detect a missing uplink
+
+One field in the ChirpStack event deserves separate attention: `fCnt`, the LoRaWAN **frame counter**.
+It increases when the device creates successive uplinks. If an application receives counters 41 and
+43 for the same probe, it knows that the sequence it observed is incomplete even though it never saw
+counter 42.
+
+To make this visible during the lab, the simulator deliberately suppresses one out of every four probe
+uplinks before it reaches ChirpStack. The **25% loss rate is intentionally exaggerated for teaching**.
+The missing uplink still consumes its counter value, so a gap appears in the next received event.
 
 ### Q7 — Use `fCnt` to identify incomplete evidence
 
-Return to the output of `watch_uplinks.py` and find two successive **received** events from the same
-probe whose `fCnt` values are not consecutive. Because the simulator injects a regular loss, such a
-gap should normally appear while you work on Q5 and Q6. Record the two counters on either side of the
-gap and their reception times.
+Return to `watch_uplinks.py` and find two successive **received** events from the same probe whose
+`fCnt` values are not consecutive. Record the two counters and their reception times.
 
-From this one concrete gap, state precisely:
+From this one concrete gap, determine which counter value is missing and what you can conclude about
+the sequence that reached ChirpStack. Then state two things that the counter does **not** tell you:
+where along the path the missing uplink disappeared, and what temperature value it contained.
 
-- which transmission counter(s) are missing;
-- what you can conclude about the sequence that reached the network server;
-- what `fCnt` alone cannot tell you about **where** the loss occurred;
-- whether the missing temperature value itself can be reconstructed from the remaining events.
+For this reasoning, ignore the fact that you know how the teaching simulator injects the loss. Reason
+only from the events that a real application would receive.
 
-The simulator designer knows that this laboratory loss was injected before ChirpStack. For the third
-point, deliberately ignore that privileged knowledge and reason only from the events an application
-would receive.
+### Finally, ask what time the measurement represents
 
-### Q8 — Identify which timestamp the freezer evidence actually contains
+The ChirpStack event also contains a `time` field. This is a network-server reception time. The probe
+itself has no clock, so it does not put a measurement timestamp in its six-byte payload.
 
-Open one freezer event in the viewer and compare its JSON `time` field with the arrival time shown by
-the relay. The probe itself has no clock.
+### Q8 — Which timestamp does the freezer evidence actually contain?
 
-Distinguish the following four instants in the end-to-end path: physical measurement, radio
-transmission, network-server reception and MQTT arrival. For each one, state whether it is directly
-known, approximated or absent in this system.
+Open one freezer event and compare its JSON `time` with the arrival time displayed by the relay.
+Consider four instants in order:
 
-Conclude by explaining what uncertainty remains if an auditor asks whether the freezer was below
-−15 °C **throughout** a particular hour.
+1. the physical temperature measurement;
+2. the radio transmission;
+3. reception by ChirpStack;
+4. arrival of the MQTT packet at the relay.
+
+For each one, state whether this system knows it directly, only approximates it, or does not know it at
+all. Then explain the remaining uncertainty if an auditor asks whether the freezer was below −15 °C
+**throughout** a particular hour.
 
 <details>
-<summary><strong>◆ Going deeper — D3: from one plant to a larger fleet</strong></summary>
+<summary><strong>◆ Going deeper — D3: from message representation to traffic at scale</strong></summary>
 
-The traffic in this lab is small enough that almost any broker can handle it, but different reporting
-patterns can have very different consequences at scale. Use the viewer's **Topics (last 5 min)** tab
-and choose three concrete behaviours:
+The freezer probe uses six compact application bytes because radio airtime matters. Once data reaches
+an IP network, other sources in the plant use much more verbose MQTT representations. Quantify that
+trade-off rather than assuming that either representation is inherently better.
 
-- one cleanroom sensor (`CR-01`: temperature + humidity);
-- the compressor (`compressors/CMP1`);
-- the main energy meter (`modbus2mqtt/meter_main/...`).
+First choose one `hygrolab/CR-01/temperature` publication in the viewer. Record its MQTT `packet B`,
+the topic length and the textual temperature payload. Estimate what fraction of that MQTT packet is
+the temperature text itself. The viewer's `packet B` is the MQTT packet only; TCP/IP and link-layer
+headers are not included.
 
-For each device, sum all of its topics and estimate **messages per hour** and **MQTT PUBLISH bytes per
-hour** (`messages × avg packet`). Then ask a deliberately simple scaling question: what traffic would
-5,000 devices produce if all 5,000 behaved like that one device? Do this separately for the three
-behaviours rather than inventing a fleet mix.
+Then use the **Topics (last 5 min)** tab to compare three reporting behaviours: `CR-01`, the compressor
+`compressors/CMP1`, and the main energy meter `modbus2mqtt/meter_main/...`. For each one, estimate
+messages per hour and MQTT PUBLISH bytes per hour. Extrapolate each behaviour independently to 5,000
+similar devices.
 
-Compare the results. Which reporting pattern dominates message rate? Which dominates bytes? Explain
-why those are not necessarily the same. Finally, list at least three reasons why this linear
-extrapolation would be unreliable for real capacity planning (bursts, different sampling rates,
-TCP/TLS overhead, reconnect storms, changes in payload size, ...).
+Explain why a larger, readable representation on the IP side can still be sensible even though the
+radio payload is compact. Finally, give at least three reasons why your linear extrapolation would be
+insufficient for real broker capacity planning (bursts, reconnects, TLS/TCP overhead, changing payload
+sizes, correlated reporting, ...).
 </details>
 
 <details>
@@ -695,18 +691,19 @@ not simply reproduce the organisation chart.
 
 ### Q10 — Make the current interoperability problems explicit
 
-Inspect one recent message from each of these four sources in the viewer:
+Start with two sources that both contain temperature information: one recent freezer event and
+`hygrolab/CR-01/temperature`. Compare only these two first. Look at their topic names and payloads and
+identify at least two differences an application would have to understand before it could treat the
+measurements uniformly.
 
-- freezer: `application/adour-coldchain/device/.../event/up`;
-- cleanroom: `hygrolab/CR-01/temperature` and `hygrolab/CR-01/humidity`;
-- main energy meter: `modbus2mqtt/meter_main/...`;
-- compressor: `compressors/CMP1`.
+Then add one recent message from the main energy meter (`modbus2mqtt/meter_main/...`) and from the
+compressor (`compressors/CMP1`). Across the four sources, identify at least **four concrete
+incompatibilities** in total. Look specifically at naming, units, timestamps, whether several
+quantities are grouped in one payload, and where device identifiers appear. For every incompatibility,
+point to the concrete pair of messages or conventions that exhibits it.
 
-For each source, note the topic structure and the payload representation. Across the four sources,
-identify at least **four concrete incompatibilities** that an application combining the data would
-have to handle. Look specifically at naming, units, timestamps, how several quantities are grouped,
-and whether identifiers are explicit or implicit. For every incompatibility, cite the two concrete
-messages or conventions you compared.
+The point is not to invent a universal data model yet. First make the heterogeneity already present in
+the plant explicit.
 
 ### Design a topic hierarchy for the plant
 
@@ -751,27 +748,33 @@ That translation is useful, but it is not neutral: once the bridge converts psi 
 timestamp or renames a field, those choices become part of the meaning and lineage of the resulting
 data.
 
-Complete the `TODO` in `work/bridge.py`. Choose output topics for the compressor and the two freezer
-probes that are consistent with the hierarchy you just proposed, then make the bridge subscribe to
-the vendor topics, convert the messages and republish them. The mapping between plant identifiers
-(`FRZ1-T1`, `FRZ1-T2`) and ChirpStack `deviceName` values is already provided in both
-`inventory.json` and the starter code; discovering that naming correspondence is not part of the
-exercise.
+Complete `work/bridge.py` in two passes rather than implementing every source at once.
+
+**First, normalize only the compressor.** Choose an output topic consistent with the hierarchy from
+Q11, subscribe to `compressors/CMP1`, convert `pressure_psi` to `pressure_bar`, and convert the
+compressor's Unix `timestamp` (seconds since 1970) to an ISO 8601 `measured_at` with a time zone. Use
+`1 psi = 0.0689476 bar` and keep at least two decimals. Run the bridge and confirm in the viewer that
+you can place one original compressor message beside its normalized output.
+
+**Then add the freezer probes.** The mapping between plant identifiers (`FRZ1-T1`, `FRZ1-T2`) and
+ChirpStack `deviceName` values is already provided in both `inventory.json` and the starter code. Use
+your decoder from Part 3 to extract `temperature_c`, and use the ChirpStack network-server reception
+time as `measured_at` because the probes themselves have no clock. Choose output topics consistent
+with the same hierarchy as the compressor.
 
 | Device | Existing message | Message produced by your bridge |
 |---|---|---|
-| `CMP-1` | `compressors/CMP1`: pressure in **psi**, Unix timestamp (seconds since 1970) | `pressure_bar`, `measured_at` |
-| `FRZ1-T1`, `FRZ1-T2` | ChirpStack event, 6-byte payload hidden in `data` | `temperature_c`, `measured_at` |
+| `CMP-1` | `compressors/CMP1`: pressure in **psi**, Unix timestamp | `pressure_bar`, `measured_at` |
+| `FRZ1-T1`, `FRZ1-T2` | ChirpStack event, 6-byte payload in `data` | `temperature_c`, `measured_at` |
 
-Use at least two decimals for °C and bar (`1 psi = 0.0689476 bar`). `measured_at` must be ISO 8601
-with a time zone. Use the compressor's own timestamp when available; for the probes, use the network
-server reception time because the probes have no clock.
-
-Run the bridge from a `workstation` shell and observe both the original and republished traffic in the viewer:
+Run the bridge from a `workstation` shell:
 
 ```bash
 python bridge.py
 ```
+
+Do not move on until you can observe both an original message and the corresponding normalized message
+for the compressor. Once that path works, add the freezer path and check it in the same way.
 
 ### Q12 — Compare an original message with the value produced by your bridge
 
@@ -924,32 +927,30 @@ freezer probe behind that gateway is still alive.
 <details>
 <summary><strong>◆ Going deeper — D9: when `online` and fresh data disagree</strong></summary>
 
-A status topic is only another piece of data. Create two situations in which it disagrees with the
-measurement stream.
+A status topic and a measurement stream are two different observations. Create two situations in which
+they disagree instead of assuming that `online` automatically means "fresh measurements are arriving".
 
-**Case A — `online`, but no fresh measurements.** Temporarily set `PERIOD_S = 300` in `sensor.py`,
-start the sensor, and wait until its retained status is `online` and its first environmental message
-has been published. Keep the process running for about 20 seconds. The MQTT connection remains alive
-(the Paho network thread can still exchange keepalive traffic), but no new measurement is expected for
-five minutes. A subscriber that looked only at the retained status would therefore see `online` while
-the measurement stream is already stale relative to the normal 5 s period. Restore `PERIOD_S = 5`
-after the experiment.
+**Case A — status still says `online`, but measurements have stopped.** Run the sensor with
+`KEEPALIVE_S = 60` and wait until it has published `online` plus several environmental measurements.
+Then use **Freeze** on that connection in the viewer. For the first 20–30 seconds, no new measurement
+reaches the broker, but the broker has not yet reached its keepalive timeout, so the retained status is
+still `online`. Compare the age of the latest measurement with the status value. Afterwards, restart
+the sensor normally to restore the connection and its retained status.
 
-**Case B — measurements arrive while the retained status says `offline`.** Run the sensor again with
-its normal 5 s period. From another shell, deliberately overwrite only the retained status:
+**Case B — measurements arrive while status says `offline`.** Run the sensor normally. From another
+`workstation` shell, deliberately overwrite only its retained status:
 
 ```bash
 mosquitto_pub -h relay -p 1884 -i status-test -r \
   -t 'lab/sensors/<name>/status' -m 'offline'
 ```
 
-Here `-r` asks the broker to retain the publication. Verify that environmental measurements continue
-while a new status subscriber immediately receives `offline`. Restart the sensor afterwards to restore
-its normal retained `online` state.
+Verify that environmental messages continue while a new status subscriber immediately receives
+`offline`. Restart the sensor afterwards so that it republishes its normal retained `online` state.
 
-For both cases, identify which observation is stale or misleading. Then propose a liveness decision
-that combines status with the age of the latest measurement and the expected 5 s publication period.
-Give one failure mode that could still fool this combined rule.
+For each case, identify which observation is stale or misleading. Then propose a liveness rule that
+combines the status value, the age of the latest measurement and the expected 5 s measurement period.
+Finally, give one realistic failure mode that could still fool that combined rule.
 </details>
 
 ---

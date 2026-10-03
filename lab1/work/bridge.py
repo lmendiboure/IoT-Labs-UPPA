@@ -17,7 +17,8 @@ HOST = os.getenv("MQTT_HOST", "relay")
 PORT = int(os.getenv("MQTT_PORT", "1884"))
 NAME = "alice"                      # TODO: your name
 
-# TODO: choose output topics consistent with the hierarchy you proposed in Q11.
+# STEP 1: choose the compressor output topic from your Q11 hierarchy.
+# STEP 2: add the two freezer output topics using the same hierarchy.
 OUTPUT_TOPICS = {
     "CMP-1": "",
     "FRZ1-T1": "",
@@ -34,7 +35,7 @@ PROBES = {
 
 def compressor(d):
     """compressors/CMP1, already parsed from JSON -> the clean message of CMP-1."""
-    # TODO: pressure_bar (from pressure_psi, at least two decimals) and measured_at
+    # STEP 1 TODO: pressure_bar (from pressure_psi, at least two decimals) and measured_at
     #       (ISO 8601 with its time zone, from the device's own 'timestamp': seconds since 1970).
     #       Add any field you find useful.
     return {}
@@ -42,7 +43,7 @@ def compressor(d):
 
 def probe(event):
     """A ChirpStack uplink event, already parsed from JSON -> the clean message of the probe."""
-    # TODO: temperature_c from the 6-byte application payload in event["data"] (use decode()),
+    # STEP 2 TODO: temperature_c from the 6-byte application payload in event["data"] (use decode()),
     #       measured_at: the probe has no clock — the best time is the network server's reception
     #       time, event["time"]. Add any field you find useful (fCnt, battery...).
     return {}
@@ -50,8 +51,8 @@ def probe(event):
 
 def on_connect(client, userdata, flags, reason_code, properties):
     # Subscribing here, not after connect(): a reconnection then subscribes again.
-    # TODO: subscribe to the compressor's topic and to every ChirpStack uplink of the cold chain
-    #       (one filter with a wildcard).
+    # STEP 1 TODO: subscribe to the compressor topic.
+    # STEP 2 TODO: also subscribe to every ChirpStack uplink of the cold chain (one wildcard filter).
     pass
 
 
