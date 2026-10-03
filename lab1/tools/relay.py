@@ -135,7 +135,7 @@ def decode(pkt, conn):
             f = r.byte()
             conn.keepalive = r.u16()
             r.skip_props(level)
-            conn.client_id = r.text() or "(empty id)"
+            conn.client_id = r.text() or "(no client id)"
             conn.clean = bool(f & 0x02)
             if f & 0x04:
                 if level == 5:
@@ -143,12 +143,10 @@ def decode(pkt, conn):
                 conn.will = {"topic": r.text(), "payload": preview(r.blob(), 60),
                              "qos": (f >> 3) & 3, "retain": bool(f & 0x20)}
             conn.username = r.text() if f & 0x80 else None
-            info["detail"] = (f"{name} v{ {3: '3.1', 4: '3.1.1', 5: '5'}.get(level, level) }, "
-                              f"keepalive {conn.keepalive} s, clean {'yes' if conn.clean else 'no'}"
-                              + (f", will on {conn.will['topic']}" if conn.will else ""))
+            info["detail"] = f"{name} v{ {3: '3.1', 4: '3.1.1', 5: '5'}.get(level, level) }"
         elif ptype == 2:                                         # CONNACK
             sp, rc = r.byte(), r.byte()
-            info["detail"] = f"session present {sp & 1}, return code {rc}"
+            info["detail"] = "connection accepted" if rc == 0 else f"connection refused (code {rc})"
             conn.accepted = rc == 0
         elif ptype == 3:                                         # PUBLISH
             qos = (flags >> 1) & 3
@@ -169,12 +167,12 @@ def decode(pkt, conn):
             while r.i < len(pkt):
                 t = r.text()
                 opt = r.byte()
-                subs.append(f"{t} (QoS {opt & 3})")
+                subs.append(t)
             info["topic"] = ", ".join(subs)
         elif ptype == 9:                                         # SUBACK
             info["packet_id"] = r.u16()
             r.skip_props(level)
-            info["detail"] = "granted " + ", ".join(str(c) for c in r.rest())
+            info["detail"] = "subscription accepted"
         elif ptype == 10:                                        # UNSUBSCRIBE
             info["packet_id"] = r.u16()
             r.skip_props(level)

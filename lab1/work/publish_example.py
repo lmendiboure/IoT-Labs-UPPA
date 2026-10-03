@@ -14,8 +14,8 @@ PORT = int(os.getenv("MQTT_PORT", "1884"))
 c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="example-1")
 c.connect(HOST, PORT, keepalive=60)
 c.loop_start()                                  # the network runs in a background thread
-info = c.publish("lab/example", "hello from the workstation", qos=1)
-info.wait_for_publish()                         # wait for the broker's PUBACK
-print("published, message id", info.mid)
+info = c.publish("lab/example", "hello from the workstation")
+info.wait_for_publish()                         # wait until the client has sent the publication
+print("published")
 c.disconnect()                                  # a polite goodbye: a DISCONNECT packet
 c.loop_stop()

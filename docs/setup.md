@@ -26,7 +26,7 @@ The exercises are executed **inside the workstation container**, which contains 
 
 ## Viewer
 
-Open <http://localhost:8080> on your laptop (`relay:8080` inside the lab). It shows every MQTT packet that passes through the lab relay, live — **not all traffic on the simulated network**. The **Packets** tab shows direction (↑ to the broker, ↓ from it), packet type, topic, payload and sizes; click a payload to expand it, and use the filter box to isolate traffic. `PINGREQ`/`PINGRESP` are hidden by default. The **Topics** tab aggregates activity by topic, and **Clients** shows observed MQTT connections and provides the **Freeze** control used later in Lab 1.
+Open <http://localhost:8080> on your laptop (`relay:8080` inside the lab). It shows every MQTT packet that passes through the lab relay, live — **not all traffic on the simulated network**. The **Packets** tab shows direction (↑ to the broker, ↓ from it), packet type, topic, payload and sizes; click a payload to expand it, and use the filter box to isolate traffic. `PINGREQ`/`PINGRESP` are hidden by default. The **Topics** tab aggregates activity by topic, and **Clients** shows observed MQTT connections. Additional protocol fields and the **Freeze** control stay hidden until **show protocol details** is enabled later in Lab 1.
 
 ## When something goes wrong
 
@@ -36,7 +36,7 @@ Open <http://localhost:8080> on your laptop (`relay:8080` inside the lab). It sh
 | a service is missing | it stopped or failed | `docker compose logs <service>`, then `docker compose up -d` |
 | the viewer does not open | no SSH tunnel | `ssh -L 8080:localhost:8080 ...`, or VS Code's *Ports* tab |
 | your client works but the viewer does not show it | you connected to the broker directly | host `relay`, port `1884` |
-| `mosquitto_sub` prints nothing | a wrong topic, or a `#` the shell swallowed | quote it: `-t 'hygrolab/#'` |
+| `mosquitto_sub` prints nothing | the topic/filter may not match what is published | check the filter and keep MQTT filters quoted, e.g. `-t 'hygrolab/#'` |
 | `is not valid JSON` | a missing comma or quote | the message gives line and column |
 | a program receives nothing | it subscribed before being connected | subscribe in `on_connect` |
 | the autoclave says `IDLE`, the router `OFF` | night or weekend at the plant | normal: note the time |

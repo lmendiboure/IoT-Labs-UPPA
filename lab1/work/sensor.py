@@ -1,4 +1,4 @@
-"""sensor.py — a stand-in for the fourth layup bay's sensor (exercises 4, 7 and 8).
+"""sensor.py — a small virtual environmental sensor used in Parts 4 and 6.
 
     python sensor.py          stop it with Ctrl+C
 
@@ -33,16 +33,16 @@ def reading():
 
 c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"sensor-{NAME}")
 
-# TODO: register the last will — 'offline' on STATUS, QoS 1, retained.
+# PART 6 TODO: register the last will — 'offline' on STATUS, retained.
 #   It travels in the CONNECT packet: where must this line be, then?
 
 c.connect(HOST, PORT, keepalive=KEEPALIVE_S)
 c.loop_start()                                  # the network runs in a background thread
 
-# TODO: publish 'online' on STATUS, QoS 1, retained.
+# PART 6 TODO: publish 'online' on STATUS, retained.
 
 while True:
     payload = json.dumps(reading())
-    c.publish(TOPIC, payload, qos=1)
+    c.publish(TOPIC, payload)
     print("published", payload)
     time.sleep(PERIOD_S)

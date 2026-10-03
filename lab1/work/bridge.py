@@ -64,7 +64,7 @@ def on_message(client, userdata, msg):
     if device is None:
         print("unknown device, ignored:", msg.topic)
         return
-    client.publish(OUTPUT_TOPICS[device], json.dumps(clean), qos=1)
+    client.publish(OUTPUT_TOPICS[device], json.dumps(clean))
     print(device, "->", OUTPUT_TOPICS[device], clean)
 
 

@@ -2,7 +2,7 @@
 
     python watch_uplinks.py          leave it running in a spare terminal; Ctrl+C to stop
 
-Ready to use: nothing to write here. It prints the fields you need for question 3.
+Ready to use: nothing to write here. It prints the fields used in the freezer trace questions.
 """
 import json
 import os
@@ -23,7 +23,7 @@ def on_message(client, userdata, msg):
     print(f"{e['time']:<26} {e['deviceInfo']['deviceName']:<17} {e['fCnt']:>6}  {len(e['rxInfo'])}", flush=True)
 
 
-c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="uplink-monitor")
 c.on_connect = on_connect
 c.on_message = on_message
 c.connect(HOST, PORT, keepalive=60)

@@ -66,16 +66,18 @@ lab runs Mosquitto, and Mosquitto also provides the two command-line programs us
 In the first `workstation` shell, subscribe to one exact topic:
 
 ```bash
-mosquitto_sub -h relay -p 1884 -t 'lab/hello' -v
+mosquitto_sub -h relay -p 1884 -i lab-subscriber -t 'lab/hello' -v
 ```
 
 Here `relay:1884` is the MQTT endpoint exposed by the lab, `-t` gives the topic of interest, and `-v`
-prints both the topic and the payload. The terminal should initially remain quiet.
+prints both the topic and the payload. The option `-i lab-subscriber` gives this command-line client a
+readable name in the viewer; MQTT calls it a **client identifier**. We will examine the role of that
+identifier later. The terminal should initially remain quiet.
 
 Open a second `workstation` shell with the same `docker compose exec workstation bash` command, then publish one message on that same topic:
 
 ```bash
-mosquitto_pub -h relay -p 1884 -t 'lab/hello' -m 'hello from team X'
+mosquitto_pub -h relay -p 1884 -i lab-publisher -t 'lab/hello' -m 'hello from team X'
 ```
 
 The subscriber should now display the message. At this point, the important chain is simply:
@@ -85,7 +87,8 @@ publisher  ->  broker  ->  subscriber
              lab/hello
 ```
 
-Now look at the same exchange in the viewer's **Packets** tab. The two terminal commands only show the
+Now look at the same exchange in the viewer's **Packets** tab. Enter `lab-` in the filter box so that
+the plant's background traffic does not obscure your two clients. The terminal commands only show the
 application-level result; the viewer exposes the MQTT exchange underneath it. You should find a
 connection from each client, a subscription from the receiving client and the publication you just
 generated. In MQTT, these appear as packets such as `CONNECT`, `SUBSCRIBE` and `PUBLISH`. A cleanly
@@ -161,8 +164,13 @@ explain the match level by level.
 <details>
 <summary><strong>◆ Going deeper — D1: what the broker says about itself</strong></summary>
 
-Mosquitto publishes operational information under the special `$SYS/` hierarchy. Subscribe to
-`$SYS/#` for about 20 seconds and explore what is available rather than stopping at the first value.
+Mosquitto publishes operational information under the special `$SYS/` hierarchy. Subscribe for about
+20 seconds (keep the quotes: `$` has a meaning to the shell) and explore what is available rather than
+stopping at the first value:
+
+```bash
+mosquitto_sub -h relay -p 1884 -i sys-observer -t '$SYS/#' -v
+```
 Find at least the broker version, the number of connected clients and one counter related to messages
 or bytes. Which of these values would actually help an operator diagnose a busy or unhealthy broker?
 Which important property of the physical plant do they tell you nothing about?
@@ -172,6 +180,9 @@ it should match everything. Find the MQTT rule responsible for this behaviour in
 Mosquitto documentation and explain why system topics are treated differently.
 
 </details>
+
+Stop the temporary `lab-subscriber` and any filter-testing subscriptions with **Ctrl+C** before moving
+on. Keeping broad subscriptions open would only duplicate background traffic in the viewer.
 
 ---
 
@@ -249,7 +260,7 @@ visible to applications.
 Observe the complete MQTT namespace for about one minute:
 
 ```bash
-mosquitto_sub -h relay -p 1884 -t '#' -v
+mosquitto_sub -h relay -p 1884 -i plant-observer -t '#' -v
 ```
 
 At the same time, use the viewer's **Topics** and **Clients** tabs. You should be able to relate a
@@ -303,6 +314,9 @@ client's application path, and explain what information that observation point w
 provide.
 
 </details>
+
+Stop `plant-observer` before continuing. It has served its purpose, and leaving a `#` subscription open
+would make every later publication appear once more on its way back to that subscriber.
 
 ---
 
@@ -379,16 +393,18 @@ The probe's 6-byte application payload is defined as follows:
 | Content | frame type `0x11` | temperature, hundredths of °C, **signed**, big-endian | humidity % | battery % | status |
 
 Later in this part you will also compare this compact binary payload with a normal MQTT publication.
-For reference, a MQTT 3.1.1 `PUBLISH` packet contains, in simplified form:
+For reference, an MQTT 3.1.1 `PUBLISH` packet contains, in simplified form:
 
 | Part | Bytes | Content |
 |---|---:|---|
-| fixed header | 1 | packet type and flags |
+| fixed header | 1 | identifies the packet as a `PUBLISH` |
 | remaining length | 1–4 | size of what follows |
 | topic length | 2 | length of the topic |
 | topic | n | UTF-8 topic |
-| packet identifier | 0 or 2 | present when required by the selected delivery mode |
 | payload | rest | application message |
+
+The viewer's `packet B` value is the size of this **MQTT packet only**. It does not include TCP, IP or
+link-layer headers.
 
 ### Decode one freezer payload
 
@@ -415,8 +431,7 @@ Then pass the `data` value from a real `FRZ1-T1` event to the script and verify 
 Take one real `hygrolab/CR-01/temperature` `PUBLISH` packet from the viewer and account for its bytes:
 the complete MQTT packet, the topic and its length, and the textual payload. Use the simplified packet
 structure above to explain the difference between the useful temperature characters and everything
-needed to transport and identify them. If the viewer shows a packet identifier, include it; otherwise
-explain why it is absent.
+needed to transport and identify them.
 
 Now compare this with the freezer probe, where the whole application payload is only six bytes and
 several physical quantities are packed together. Compute the fraction of your cleanroom MQTT packet
@@ -427,8 +442,7 @@ even if the battery-powered radio link is kept compact.
 
 ### Q6 — Determine where meaning and metadata are introduced
 
-Use the **same real `FRZ1-T1` event** you decoded above. Put the decoded six fields next to the
-corresponding ChirpStack JSON event and compare them.
+Use the **same real `FRZ1-T1` event** you decoded above. Put the decoded probe values next to the corresponding ChirpStack JSON event and compare them.
 
 Identify at least three useful pieces of information present in the JSON but absent from the six
 bytes produced by the probe. For each one, state which component in the path can know or add it and
@@ -471,11 +485,12 @@ The traffic in this lab is small enough that almost any broker can handle it. Sc
 only a matter of multiplying the number of devices: message frequency and message size can make very
 different sources dominate the load.
 
-Stop your own temporary clients so that they do not bias the observation. Over a one-minute window,
-use the viewer to estimate both the number of publications and the number of bytes generated by the
-plant. Separate at least the freezer, cleanroom and one higher-rate source rather than using only one
-global total. Extrapolate your measurements to one day, then to a hypothetical deployment of 5,000
-devices with the same traffic mix.
+Stop your own temporary publishers so that they do not bias the observation. Use the viewer's
+**Topics (last 5 min)** tab to estimate both message count and MQTT traffic volume. For a topic, an
+approximation of its traffic over that window is `messages × avg packet`; sum the relevant topics when
+a source publishes several measurements. Separate at least the freezer, cleanroom and one higher-rate
+source rather than using only one global total. Extrapolate the observed rates to one day, then to a
+hypothetical deployment of 5,000 devices with the same traffic mix.
 
 Compare the source that dominates **message count** with the one that dominates **bytes**. Are they
 the same? Finally, identify at least three assumptions in your extrapolation that would probably fail
@@ -515,16 +530,18 @@ second, what additional capability would have to exist closer to the sensor?
 
 </details>
 
+Stop `watch_uplinks.py` and any other temporary subscriptions from this part before continuing.
+
 ---
 
 ## Part 4 — What must an MQTT client get right?
 
 So far, every producer was part of the simulated plant. Creating one ourselves gives more control over
 its connection lifecycle and makes an MQTT detail visible that is easy to overlook when everything is
-working normally: the broker needs a stable way to distinguish one client session from another.
+working normally: the broker needs a stable way to distinguish one MQTT client from another.
 
-A MQTT client opens a connection and presents a **client identifier**. The identifier distinguishes
-client sessions at the broker; **it is not, by itself, proof of the physical device's identity**.
+An MQTT client opens a connection and presents a **client identifier**. The identifier lets the broker
+distinguish clients that connect to it; **it is not, by itself, proof of the physical device's identity**.
 
 The lab already includes **Paho**, a Python MQTT client library. A minimal publisher using it looks like this:
 
@@ -542,13 +559,13 @@ that identifier.
 ### Add a virtual sensor
 
 Run `python publish_example.py` once and identify its `CONNECT`, `PUBLISH` and `DISCONNECT` packets in
-the viewer. Then complete the relevant `TODO` in `work/sensor.py` so that the simulated
-sensor:
+the viewer. Then open `work/sensor.py`. For now, complete only the `NAME` and `reading()` TODOs; the two
+status/last-will TODOs are intentionally left for Part 6. The simulated sensor should:
 
-- uses your name in its client id and topic;
-- publishes `temperature_c`, `humidity_pct` and `measured_at` as JSON;
-- represents `measured_at` as an ISO 8601 timestamp in UTC;
-- publishes every 5 s on `lab/sensors/<name>/env`.
+- use your name in its client id and topic;
+- publish `temperature_c`, `humidity_pct` and `measured_at` as JSON;
+- represent `measured_at` as an ISO 8601 timestamp in UTC;
+- publish every 5 s on `lab/sensors/<name>/env`.
 
 Run it with:
 
@@ -561,7 +578,8 @@ Let several messages appear and inspect one of them in the viewer.
 ### Q9 — Observe what happens when two connections reuse one client id
 
 Keep your first `sensor.py` running. From a second `workstation` shell, start a second copy without
-changing `NAME`. Watch the **Clients** tab and both terminals for roughly 30 seconds.
+changing `NAME`. Filter the viewer on `sensor-<name>`, then watch the **Clients** tab and both terminals
+for roughly 30 seconds.
 
 Describe the sequence you observe when the two processes repeatedly try to use the same client id,
 and relate it to the MQTT rule given above. Then distinguish two statements:
@@ -592,12 +610,15 @@ with a label; the broker sees a client id such as `sensor-alice`; applications m
 a topic such as `lab/sensors/alice/env` or from a field in the payload. These names often agree, but
 MQTT does not make them equivalent.
 
-For each level—physical asset, MQTT client/session, application-level device name—state what is being
+For each level—physical asset, MQTT client identifier, application-level device name—state what is being
 identified and where the mapping to the other levels actually comes from. Then construct one realistic
 misconfiguration in which two levels still agree while the third points to the wrong asset. From the
 MQTT data alone, would that error necessarily be detectable?
 
 </details>
+
+Stop **both** copies of `sensor.py` before continuing; otherwise their reconnect loop will keep
+interfering with later observations.
 
 ---
 
@@ -655,8 +676,9 @@ required devices and avoid a list of one filter per device; if a need genuinely 
 that is already useful information about the structure you chose.
 
 Then consider a new request that was not in the original requirements: an engineer wants **every
-temperature sensor on the site**, regardless of area. Write the filter or filters needed for that
-request and compare them with N1–N5. Explain which kinds of query your hierarchy naturally favours,
+source that reports temperature on the site** — including the freezer probes, cleanroom sensors and
+roof weather station — regardless of area. Write the filter or filters needed for that request and
+compare them with N1–N5. Explain which kinds of query your hierarchy naturally favours,
 which become awkward, and whether you would change the hierarchy after seeing this new requirement.
 
 ### Normalize two sources
@@ -672,7 +694,9 @@ data.
 
 Complete the `TODO` in `work/bridge.py`. Choose output topics for the compressor and the two freezer
 probes that are consistent with the hierarchy you just proposed, then make the bridge subscribe to
-the vendor topics, convert the messages and republish them:
+the vendor topics, convert the messages and republish them. To map the two ChirpStack `deviceName`
+values back to `FRZ1-T1` and `FRZ1-T2`, use the `near the door` / `at the back` notes in
+`inventory.json` and the corresponding words in the live events.
 
 | Device | Existing message | Message produced by your bridge |
 |---|---|---|
@@ -713,7 +737,7 @@ normalized value.
 <summary><strong>◆ Going deeper — D8: can one tree make every query easy?</strong></summary>
 
 Treat the hierarchy from Q11 as one design among several, not as a final answer. Build a second
-hierarchy whose first objective is to make **all temperature sensors on the site** selectable with a
+hierarchy whose first objective is to make **all temperature-reporting sources on the site** selectable with a
 single MQTT filter. Write concrete topics for the same representative devices and recompute the
 filters for N1–N5.
 
@@ -728,6 +752,9 @@ kept as **metadata in the payload**. That distinction becomes important once the
 queries grows.
 
 </details>
+
+Stop `bridge.py` before continuing so that Part 6 contains only the traffic needed for the liveness
+experiments.
 
 ---
 
@@ -745,12 +772,15 @@ that value immediately, without waiting for the original producer to publish aga
 This is useful for state such as a current mode or configuration, but it creates an obvious question:
 the value is the **last value remembered by the broker**, not necessarily a fresh measurement.
 
+For the experiments in this part, enable **show protocol details** in the viewer. Retained `PUBLISH`
+packets are then marked `retain`, and the Clients tab exposes the connection information used below.
+
 ### Q13 — Determine what a new subscriber learns immediately
 
 Stop any broad `#` subscription you currently have. Start a fresh one:
 
 ```bash
-mosquitto_sub -h relay -p 1884 -t '#' -v
+mosquitto_sub -h relay -p 1884 -i retained-observer -t '#' -v
 ```
 
 Let the subscriber run only briefly, then stop it so that the first burst is easy to inspect. In the
@@ -787,10 +817,13 @@ Complete the two status-related `TODO` in `sensor.py`:
 Observe the status from another terminal:
 
 ```bash
-mosquitto_sub -h relay -p 1884 -t 'lab/sensors/+/status' -v
+mosquitto_sub -h relay -p 1884 -i status-observer -t 'lab/sensors/+/status' -v
 ```
 
-Start the sensor, verify that `online` is visible, then stop the Python process with **Ctrl+C** and observe the status change.
+Start the sensor, verify that `online` is visible, then stop the Python process with **Ctrl+C** and
+observe the status change. The starter script does not catch Ctrl+C to send an MQTT `DISCONNECT`; the
+process exits and its TCP connection closes abruptly, so this is an unexpected disconnect from the
+broker's point of view.
 
 ### Observe a connection that dies silently
 
@@ -799,6 +832,10 @@ vanishes without closing cleanly, that may not be immediate. MQTT therefore asso
 connection with a **keepalive** interval. An otherwise idle client periodically proves that the
 connection is still responsive, using `PINGREQ`/`PINGRESP`; if the broker hears nothing for long
 enough, it treats the connection as lost and can publish the client's last will.
+
+For MQTT 3.1.1, the broker must treat the connection as lost if it receives no MQTT control packet
+from the client for **1.5 times the keepalive interval**. A client that is otherwise idle sends
+`PINGREQ` before its keepalive interval expires; ordinary MQTT traffic also counts as activity.
 
 The next experiment makes that delay visible rather than simply terminating the process.
 
