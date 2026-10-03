@@ -31,72 +31,100 @@ through `relay:1884` rather than directly to the broker.
 
 ## Part 1 — One MQTT message, from publisher to subscriber
 
-The plant already produces enough traffic to make the viewer look busy. Rather than trying to interpret
-everything at once, start with the smallest useful MQTT exchange and follow it from one client to
-another.
+Before looking at the plant, start with the smallest MQTT system that is useful: one program produces a
+message, one broker receives it, and one program consumes it.
 
-**MQTT** is a publish/subscribe protocol. A client **publishes** a message on a **topic**; another client **subscribes** to a topic filter. Between them sits a **broker**, which receives publications and
-forwards each one to the subscribers whose filters match. This decoupling is one of the reasons MQTT
-is common in IoT systems: the producer does not need to know which applications will eventually use
-its data.
-
-**MQTT is the protocol; Eclipse Mosquitto is an implementation.** The broker used here runs
-Mosquitto, and Mosquitto also provides the two command-line clients used below:
-
-- `mosquitto_sub`: subscribe and print received messages;
-- `mosquitto_pub`: publish one message.
-
-Two wildcards can appear in subscription filters:
-
-- `+` replaces **one** topic level: `hygrolab/+/temperature`;
-- `#` replaces **the rest** of a topic and must be the final level: `hygrolab/#`.
-
-At this point, only a few MQTT packet types matter. `CONNECT` opens the client connection,
-`SUBSCRIBE` installs a filter, `PUBLISH` carries a message, and `DISCONNECT` closes a connection
-cleanly. The viewer lets you see those packets directly, which is enough to reconstruct what happens
-between the two terminals and the broker.
-
-### Publish and subscribe by hand
-
-Open a first workstation terminal and subscribe to the small `lab/` namespace that we will use for
-our own experiments:
-
-```bash
-mosquitto_sub -h relay -p 1884 -t 'lab/#' -v
+```mermaid
+flowchart LR
+    P["Publisher"] -- "message<br/>topic: lab/hello" --> B[("MQTT broker")]
+    B -- "message on<br/>lab/hello" --> S["Subscriber"]
 ```
 
-Here `relay:1884` is the MQTT endpoint exposed by the lab, `-t` specifies the subscription filter, and
-`-v` prints both topic and payload. The terminal should initially remain quiet.
+The **publisher** sends a message to a named **topic**. The **subscriber** asks the broker for messages
+on that topic. The **broker** sits between them: it receives publications and forwards them to the
+subscribers that asked for the corresponding topics. The publisher therefore does not need to know
+which application will consume its data.
 
-From a second terminal, publish a message of your own:
+**MQTT** is the protocol. **Eclipse Mosquitto** is one implementation of it. The broker used in this
+lab runs Mosquitto, and Mosquitto also provides the two command-line programs used below:
+`mosquitto_pub` to publish a message and `mosquitto_sub` to receive one.
+
+### Publish one message and receive it
+
+Open a first workstation terminal and subscribe to one exact topic:
 
 ```bash
-mosquitto_pub -h relay -p 1884 -t lab/hello -m 'hello from team X'
+mosquitto_sub -h relay -p 1884 -t 'lab/hello' -v
 ```
 
-The message should now appear in the subscriber terminal. This gives you a complete exchange whose
-traffic can also be followed in the viewer.
+Here `relay:1884` is the MQTT endpoint exposed by the lab, `-t` gives the topic of interest, and `-v`
+prints both the topic and the payload. The terminal should initially remain quiet.
 
-In the viewer, use the **Packets** tab to locate the subscription and your publication. The filter box
-is useful because the plant generates continuous background traffic. `↑` denotes a packet travelling
-toward the broker and `↓` a packet travelling away from it.
+From a second terminal, publish one message on that same topic:
 
+```bash
+mosquitto_pub -h relay -p 1884 -t 'lab/hello' -m 'hello from team X'
+```
+
+The subscriber should now display the message. At this point, the important chain is simply:
+
+```text
+publisher  ->  broker  ->  subscriber
+             lab/hello
+```
+
+Now look at the same exchange in the viewer's **Packets** tab. The two terminal commands only show the
+application-level result; the viewer exposes the MQTT exchange underneath it. You should find a
+connection from each client, a subscription from the receiving client and the publication you just
+generated. In MQTT, these appear as packets such as `CONNECT`, `SUBSCRIBE` and `PUBLISH`. A cleanly
+closed client may also send `DISCONNECT`.
+
+The lab inserts a relay so that this traffic can be observed. `↑` denotes a packet travelling toward
+the broker and `↓` a packet travelling away from it.
 
 ### Q1 — Reconstruct the exchange you just generated
 
 Follow your two terminals in the **Packets** tab. Starting with the subscriber connection and ending
 with the message received by that subscriber, reconstruct the sequence you can actually observe.
-Which client sent the subscription, which filter did it install, which client later published the
-message, and on which topic? Identify the packet types involved and explain where the decision to
-forward the publication is made.
+Which client installed the subscription? Which topic did it request? Which client later published the
+message? Where, in this chain, is the decision made to forward the publication to the subscriber?
 
-From that sequence, explain how the command-line actions map onto the MQTT roles of **publisher**,
-**subscriber** and **broker**.
+Relate what you observe to the three roles in the figure above: **publisher**, **broker** and
+**subscriber**.
+
+### From one topic to several
+
+Subscribing to one exact topic works for `lab/hello`, but a real application often needs a whole set of
+related measurements. MQTT topics are hierarchical names made of levels separated by `/`. For example,
+the cleanroom sensors use names of this form:
+
+```text
+hygrolab
+├── CR-01
+│   ├── temperature
+│   └── humidity
+└── CR-02
+    ├── temperature
+    └── humidity
+```
+
+A **topic filter** can describe more than one topic. A **wildcard** is a placeholder used in a
+subscription filter instead of spelling out an exact level or suffix. MQTT provides two wildcard
+symbols:
+
+```text
+hygrolab/CR-01/temperature    one exact topic
+hygrolab/+/temperature        '+' lets one level vary
+hygrolab/#                    '#' includes everything below hygrolab
+```
+
+`+` always replaces exactly one level. `#` replaces all remaining levels and can only appear at the
+end of a filter. These wildcards belong to **subscription filters**; publishers still publish to a
+concrete topic such as `hygrolab/CR-01/temperature`.
 
 ### Q2 — Read MQTT topic filters as the broker does
 
-Topic filters become important as soon as one application listens to more than one sensor. Consider
-the following three filters:
+Consider the following three filters:
 
 ```text
 hygrolab/#
@@ -114,9 +142,9 @@ compressors/CMP1
 ```
 
 Then test the filters with `mosquitto_sub` for a short period and compare what actually arrives with
-your prediction. Some listed topics may not currently be produced; in that case the matching rule, not
-the absence of a live message, decides the answer. For at least two non-obvious cases, explain the
-match level by level.
+your prediction. Some listed topics may not currently be produced; in that case, decide from the
+matching rule rather than from the absence of a live message. For at least two non-obvious cases,
+explain the match level by level.
 
 <details>
 <summary><strong>◆ Going deeper — D1: what the broker says about itself</strong></summary>
@@ -137,11 +165,25 @@ Mosquitto documentation and explain why system topics are treated differently.
 
 ## Part 2 — From physical devices to MQTT
 
-The simple exchange above is useful, but it is not yet representative of the plant. Some equipment can
-publish MQTT itself; other equipment speaks a field protocol, uses a proprietary radio, or has no IP
-stack at all. In those cases a gateway or translator stands between the physical device and the
-broker. As a result, the MQTT client visible to an application is not necessarily the component that
-measured the value.
+The exchange above had only three actors. In the plant, there are two basic ways for a measurement to
+reach MQTT. Some devices can act as MQTT clients themselves. Others speak a different protocol and
+need an intermediate component that translates or forwards their data before MQTT appears.
+
+```mermaid
+flowchart LR
+    D1["device"] -- "MQTT" --> B[("broker")]
+    D2["device"] -- "local protocol" --> G["intermediate system"] -- "MQTT" --> B
+```
+
+In the first case, the physical device and the MQTT client may be the same component. In the second,
+the physical device is not an MQTT client: a gateway, adapter, network server or other intermediate
+component eventually publishes on its behalf. The broker therefore sees that intermediate component,
+not the original sensor, as its MQTT peer. That distinction matters later when we ask where a value
+came from or what exactly has failed.
+
+The plant is simply a larger combination of these two patterns. Use the following diagram first as a
+map: identify which sources publish MQTT directly and which ones reach MQTT through an intermediate
+component.
 
 This is the current architecture:
 
@@ -169,10 +211,10 @@ flowchart LR
         B[("MQTT broker")]
     end
     subgraph apps["Applications"]
-        MES["MES<br/>(production orders)"]
+        MES["Manufacturing execution system<br/>(MES, production orders)"]
         YOU["dashboards, records, alarms:<br/>what you will build"]
     end
-    FRZ -- "LoRa radio, 868 MHz" --> GW -- "IP" --> NS -- MQTT --> B
+    FRZ -- "LoRaWAN, 868 MHz" --> GW -- "IP" --> NS -- MQTT --> B
     CR -- "vendor radio" --> HYG -- MQTT --> B
     DOOR -- "wired contact" --> CSC -- MQTT --> B
     CNC -- "machine interface" --> ADP -- MQTT --> B
@@ -183,6 +225,10 @@ flowchart LR
     MES <-- MQTT --> B
     B --> YOU
 ```
+
+The labels on the first links—LoRa radio, Modbus, vendor radio, machine interface—mainly tell you that
+those devices do **not** start by speaking MQTT. Their internal protocol details are not needed to trace
+the path here; the important question is where MQTT first appears.
 
 A **gateway** or **translator** belongs to the data path. Depending on the source, it may change the
 communication protocol, the representation of a value, the timestamp, or the identifier eventually
@@ -250,11 +296,31 @@ provide.
 
 ## Part 3 — Follow one freezer reading end to end
 
-The freezer gives us a more demanding case. The plant manager does not merely want a temperature on
-a dashboard: during an audit, she may need to justify what was measured, when it was observed and
-whether part of the history is missing. Following one `FRZ1-T1` reading end to end makes it possible
-to separate the measurement produced by the probe from the information added later by the LoRaWAN
-infrastructure and the MQTT side of the system.
+The freezer path is the first one in which the physical sensor is several steps away from MQTT. Focus
+on a single device, `FRZ1-T1`, and build the chain before looking at the details of its messages.
+
+`FRZ1-T1` is a battery-powered temperature **probe**, i.e. the physical sensor placed inside the
+freezer. It does **not** run MQTT. Instead, one measurement travels through the following chain:
+
+```mermaid
+flowchart LR
+    P["FRZ1-T1<br/>temperature probe"] -- "LoRaWAN radio" --> G["LoRaWAN gateway"]
+    G -- "IP" --> NS["ChirpStack<br/>network server"]
+    NS -- "MQTT / JSON" --> B[("MQTT broker")]
+```
+
+The names in this chain refer to different roles:
+
+- **LoRaWAN** is the low-power wide-area networking technology used on the radio link from the probe.
+  It is designed for small messages from constrained devices over relatively long distances.
+- a **LoRaWAN gateway** receives radio transmissions and forwards the received frames over an IP
+  network. It is the bridge between the radio side and the network side;
+- **ChirpStack** is the LoRaWAN network-server software used in this lab. It processes received
+  LoRaWAN uplinks and exposes the resulting events to applications, here through MQTT.
+
+An **uplink** is simply a transmission travelling from the end device toward the network. At this
+stage, the important distinction is between the application data produced by the probe and the larger
+LoRaWAN frame that carries those data over the radio.
 
 In a spare terminal, start the uplink monitor and leave it running during this part:
 
@@ -262,27 +328,37 @@ In a spare terminal, start the uplink monitor and leave it running during this p
 python watch_uplinks.py
 ```
 
-It prints the network-server reception time, probe name, LoRaWAN frame counter (`fCnt`) and number of
-gateways that received each uplink.
+For each received uplink, it prints the network-server reception time, the probe name, a LoRaWAN
+frame counter (`fCnt`) and the number of gateways that received the radio transmission. Watch a few
+successive lines before going further.
+
+One radio transmission can be heard by more than one gateway. Those gateways forward copies of the
+same transmission to ChirpStack; the network server recognises the duplicates and exposes a single
+application event. The more detailed path is therefore:
 
 ```mermaid
 flowchart LR
-    P["FRZ1-T1<br/>probe"] -- "6-byte application payload<br/>inside a LoRaWAN frame" --> G1["gateway 1"]
+    P["FRZ1-T1<br/>probe"] -- "same radio transmission" --> G1["gateway 1"]
     P -- "same radio transmission" --> G2["gateway 2"]
-    G1 -- "frame + radio metadata" --> NS["network server<br/>(ChirpStack)"]
-    G2 -- "frame + radio metadata" --> NS
-    NS -- "MQTT PUBLISH:<br/>JSON event" --> B[("broker")]
+    G1 -- "frame + reception metadata" --> NS["ChirpStack<br/>network server"]
+    G2 -- "frame + reception metadata" --> NS
+    NS -- "one MQTT PUBLISH<br/>JSON event" --> B[("broker")]
 ```
 
-The probe wakes once a minute, measures, transmits and sleeps. Its **application payload is 6 bytes**.
-LoRaWAN headers make the transmitted LoRaWAN frame larger, and the complete physical radio
-transmission is larger again. The 6-byte quantity therefore refers only to application data produced
-by the probe.
+The probe wakes once a minute, measures, transmits and sleeps. The application payload it creates is
+only **6 bytes**. LoRaWAN adds its own protocol information around those bytes, so the transmitted
+LoRaWAN frame is larger; the complete physical radio transmission is larger again. In what follows,
+`6 bytes` always refers to the **application payload produced by the probe**, not to the full radio
+frame.
 
-Every gateway in range may receive the same radio transmission. The network server deduplicates
-those copies and publishes one JSON event on MQTT. The original 6 bytes appear base64-encoded in the
-field `data`. The event also contains metadata added later, including a reception time, gateway
-information and the frame counter `fCnt`.
+The counter `fCnt` belongs to LoRaWAN. It increases across successive uplinks from a device, which
+means that a jump in the counter can reveal that the sequence observed by the network server is
+incomplete. It does not, by itself, tell you where a missing transmission disappeared.
+
+ChirpStack publishes the received uplink as a JSON event. The original 6 binary bytes cannot be placed
+directly in ordinary JSON text, so they appear in the `data` field using **base64**, an encoding that
+represents arbitrary bytes as text. The event also contains information that did not come from those
+six application bytes, such as network-server reception time and gateway reception metadata.
 
 The probe's 6-byte application payload is defined as follows:
 
@@ -290,7 +366,8 @@ The probe's 6-byte application payload is defined as follows:
 |---|---|---|---|---|---|
 | Content | frame type `0x11` | temperature, hundredths of °C, **signed**, big-endian | humidity % | battery % | status |
 
-A MQTT 3.1.1 `PUBLISH` packet contains, in simplified form:
+Later in this part you will also compare this compact binary payload with a normal MQTT publication.
+For reference, a MQTT 3.1.1 `PUBLISH` packet contains, in simplified form:
 
 | Part | Bytes | Content |
 |---|---:|---|
@@ -437,13 +514,13 @@ working normally: the broker needs a stable way to distinguish one client sessio
 A MQTT client opens a connection and presents a **client identifier**. The identifier distinguishes
 client sessions at the broker; **it is not, by itself, proof of the physical device's identity**.
 
-With Paho in Python, a minimal publisher looks like this:
+The lab already includes **Paho**, a Python MQTT client library. A minimal publisher using it looks like this:
 
 ```python
 c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="sensor-alice")
-c.connect("relay", 1884, keepalive=60)
+c.connect("relay", 1884)
 c.loop_start()
-c.publish("some/topic", "some payload", qos=1)
+c.publish("some/topic", "some payload")
 ```
 
 For the next experiment, one MQTT rule is sufficient: when a new connection presents a client
@@ -524,14 +601,7 @@ MQTT topics are part of that interface. Their hierarchy determines which groups 
 select with one subscription. With `plant/<area>/<cell>/<device>/...`, for example,
 `plant/curing/#` naturally selects the curing area, while a query that cuts across areas may be less
 convenient. There is therefore a design trade-off: the tree should reflect the queries that matter,
-not simply reproduce the organisation chart. ISA-95 terminology—site, area, work centre, work unit—
-provides useful names for parts of that hierarchy, without imposing one unique MQTT tree.
-
-Topic organisation only solves addressing. Payloads can still disagree on units, timestamps and field
-names. A **bridge** can translate a vendor-specific message into a common representation and republish
-it under a common topic. That makes downstream code simpler, but it also gives the bridge a new
-responsibility: once it converts or adds information, that transformation becomes part of the data
-lineage.
+not simply reproduce the organisation chart.
 
 ### Q10 — Make the current interoperability problems explicit
 
@@ -558,7 +628,7 @@ hierarchy. Five applications already exist or are planned:
 | N1 | everything in the curing area |
 | N2 | every energy meter, whatever the area |
 | N3 | everything in the cold store |
-| N4 | every production machine, for the OEE dashboard |
+| N4 | every production machine, for the production-performance dashboard |
 | N5 | everything in the autoclave-1 cell, for its quality record |
 
 Propose a consistent MQTT topic hierarchy for the plant. You do not need to enumerate every possible
@@ -579,10 +649,18 @@ which become awkward, and whether you would change the hierarchy after seeing th
 
 ### Normalize two sources
 
-The next step is to use the hierarchy rather than leave it on paper. Complete the `TODO` in
-`work/bridge.py`. Choose output topics for the compressor and the two freezer probes that are
-consistent with the hierarchy you just proposed, then make the bridge subscribe to the vendor topics,
-convert the messages and republish them:
+A common topic hierarchy solves only the **addressing** problem. The payloads can still disagree on
+units, field names and timestamps. One way to hide those vendor-specific differences from downstream
+applications is to place a **bridge** in the data path. Here, the bridge subscribes to an existing
+message, interprets it, converts what is needed and republishes a new message in the common form.
+
+That translation is useful, but it is not neutral: once the bridge converts psi to bar, chooses a
+timestamp or renames a field, those choices become part of the meaning and lineage of the resulting
+data.
+
+Complete the `TODO` in `work/bridge.py`. Choose output topics for the compressor and the two freezer
+probes that are consistent with the hierarchy you just proposed, then make the bridge subscribe to
+the vendor topics, convert the messages and republish them:
 
 | Device | Existing message | Message produced by your bridge |
 |---|---|---|
@@ -645,26 +723,15 @@ queries grows.
 
 Up to this point, receiving a message has been easy to interpret: some component was alive long enough
 to publish it. Silence is harder. A quiet topic might mean that nothing changed, that a sensor stopped
-measuring, that a gateway failed, or simply that an MQTT connection disappeared. Those situations
-look similar from the application side unless the system carries additional state.
+measuring, that a gateway failed, or simply that an MQTT connection disappeared. MQTT provides mechanisms for these different situations, but they answer different questions.
 
-MQTT offers several mechanisms that are easy to confuse because they all affect what a late or idle
-subscriber sees. A **retained message** is the broker's stored last retained value for a topic, so a
-new subscriber can receive it immediately even though it may be old. A **last will** is different: the
-client registers it at connection time, and the broker publishes it if that connection later disappears
-without a clean `DISCONNECT`. Finally, the **keepalive** bounds how long an otherwise silent connection
-can remain unobserved; idle clients exchange `PINGREQ`/`PINGRESP` packets so the broker knows the
-connection is still responsive.
+A **retained message** addresses one of them: what should a subscriber learn when it arrives after the
+last publication? When a publication is marked as retained, the broker stores the latest retained value
+for that topic. A subscriber that arrives later can therefore receive
+that value immediately, without waiting for the original producer to publish again.
 
-Together these mechanisms can describe the liveness of an MQTT **client connection**. They do not
-automatically prove that every physical sensor behind that client is healthy or still producing fresh
-measurements. A common status pattern combines them as follows:
-
-```python
-c.will_set(STATUS, "offline", qos=1, retain=True)   # configured before connect()
-c.connect(HOST, PORT, keepalive=KEEPALIVE_S)
-c.publish(STATUS, "online", qos=1, retain=True)
-```
+This is useful for state such as a current mode or configuration, but it creates an obvious question:
+the value is the **last value remembered by the broker**, not necessarily a fresh measurement.
 
 ### Q13 — Determine what a new subscriber learns immediately
 
@@ -685,10 +752,25 @@ evidence rather than simply the last value the broker remembers?
 
 ### Add an online status and a last will
 
+A retained value tells a late subscriber what the broker remembers, but it does not tell us why a
+client disappeared. MQTT provides a separate mechanism for unexpected disconnections: the **Last Will
+and Testament** (usually shortened to **last will**).
+
+When a client connects, it can give the broker a message to publish on its behalf if the connection
+later disappears without a clean `DISCONNECT`. A common pattern is therefore to register a retained
+`offline` will before connecting, then publish a retained `online` status once the connection is
+established:
+
+```python
+c.will_set(STATUS, "offline", retain=True)
+c.connect(HOST, PORT, keepalive=KEEPALIVE_S)
+c.publish(STATUS, "online", retain=True)
+```
+
 Complete the two status-related `TODO` in `sensor.py`:
 
 - before connecting, register `offline` as a retained last will on `lab/sensors/<name>/status`;
-- after connecting, publish `online` on the same topic, QoS 1 and retained.
+- after connecting, publish `online` on the same topic and retain that status.
 
 Observe the status from another terminal:
 
@@ -699,6 +781,14 @@ mosquitto_sub -h relay -p 1884 -t 'lab/sensors/+/status' -v
 Start the sensor, verify that `online` is visible, then stop the Python process with **Ctrl+C** and observe the status change.
 
 ### Observe a connection that dies silently
+
+The last will still depends on the broker noticing that the connection is gone. If a TCP connection
+vanishes without closing cleanly, that may not be immediate. MQTT therefore associates each
+connection with a **keepalive** interval. An otherwise idle client periodically proves that the
+connection is still responsive, using `PINGREQ`/`PINGRESP`; if the broker hears nothing for long
+enough, it treats the connection as lost and can publish the client's last will.
+
+The next experiment makes that delay visible rather than simply terminating the process.
 
 Set `KEEPALIVE_S = 15`, restart the sensor and keep the status subscription open. In the viewer's
 **Clients** tab, use **Freeze** on that connection. The relay then stops forwarding traffic without
