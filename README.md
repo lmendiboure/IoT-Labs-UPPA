@@ -20,7 +20,7 @@ Over ten labs, you build that system, one question at a time.
 | 9 | Who can read and write our data? | TLS, authentication, access control |
 | 10 | Is our architecture right? | you defend it |
 
-Each lab is designed for a full three-hour session, with optional extensions beyond the core work. The simulated plant runs on a virtual machine and reproduces the kinds of events needed throughout the course: shifts, cure cycles, door openings, changing measurements and device failures.
+Each lab contains a core path and optional extensions for groups that progress faster. The simulated plant runs on a virtual machine and reproduces the kinds of events needed throughout the course: shifts, cure cycles, door openings, changing measurements and device failures.
 
 ## Start
 

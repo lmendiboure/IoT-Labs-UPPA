@@ -49,4 +49,4 @@ labs will make you compare their consequences rather than treat this table as a 
 
 ## Engineering principles used throughout the course
 
-The labs repeatedly use three principles: distinguish the interaction model from the protocol that implements it; quantify communication costs rather than reasoning only from protocol names; and justify architectural decisions in terms of a constraint, a retained option, an alternative and the rationale for the choice. The same structure is used in the decision log.
+The labs repeatedly use three principles: distinguish the interaction model from the protocol that implements it; quantify communication costs rather than reasoning only from protocol names; and justify architectural decisions in terms of a constraint, a retained option, an alternative and the rationale for the choice.
