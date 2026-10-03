@@ -20,8 +20,20 @@ can — and cannot — be established from the data that finally reach applicati
 
 ## Preparation
 
-Follow [Working on your VM](../docs/setup.md) to connect, start the lab and open a terminal in the
-workstation. Open the **viewer** in your laptop's browser at <http://localhost:8080> and keep it available throughout the lab. Within a few seconds, MQTT traffic from the simulated plant should appear.
+Follow [Working on your VM](../docs/setup.md) to connect to the VM and start the lab. Open the
+**viewer** in your laptop's browser at <http://localhost:8080> and keep it available throughout the
+lab. Within a few seconds, MQTT traffic from the simulated plant should appear.
+
+All commands in this lab are run **inside the `workstation` container** unless stated otherwise. The
+container already includes Python and the Mosquitto command-line clients, so nothing needs to be
+installed on your own machine. From `~/iot-labs/lab1` on the VM, open a shell in that container with:
+
+```bash
+docker compose exec workstation bash
+```
+
+The shell opens in `/work`, which is the lab's working directory. Open additional shells with the same
+command whenever two programs must run at the same time.
 
 The viewer is an observation instrument built for the course. It displays the MQTT traffic that
 passes through the lab relay. To make this observation possible, the simulated MQTT clients connect
@@ -51,7 +63,7 @@ lab runs Mosquitto, and Mosquitto also provides the two command-line programs us
 
 ### Publish one message and receive it
 
-Open a first workstation terminal and subscribe to one exact topic:
+In the first `workstation` shell, subscribe to one exact topic:
 
 ```bash
 mosquitto_sub -h relay -p 1884 -t 'lab/hello' -v
@@ -60,7 +72,7 @@ mosquitto_sub -h relay -p 1884 -t 'lab/hello' -v
 Here `relay:1884` is the MQTT endpoint exposed by the lab, `-t` gives the topic of interest, and `-v`
 prints both the topic and the payload. The terminal should initially remain quiet.
 
-From a second terminal, publish one message on that same topic:
+Open a second `workstation` shell with the same `docker compose exec workstation bash` command, then publish one message on that same topic:
 
 ```bash
 mosquitto_pub -h relay -p 1884 -t 'lab/hello' -m 'hello from team X'
@@ -548,7 +560,7 @@ Let several messages appear and inspect one of them in the viewer.
 
 ### Q9 — Observe what happens when two connections reuse one client id
 
-Keep your first `sensor.py` running. From a second workstation terminal, start a second copy without
+Keep your first `sensor.py` running. From a second `workstation` shell, start a second copy without
 changing `NAME`. Watch the **Clients** tab and both terminals for roughly 30 seconds.
 
 Describe the sequence you observe when the two processes repeatedly try to use the same client id,

@@ -17,7 +17,7 @@ On the VM:
 cd ~/iot-labs/lab1
 docker compose up -d --build                       # starts the lab; the first time takes a few minutes
 docker compose ps --services --status running      # what is running
-docker compose exec workstation bash               # opens a terminal in your workstation
+docker compose exec workstation bash               # opens a shell in the workstation container
 ```
 
 After `git pull` (a new lab, or a fix), start again with `--build`, so that the lab's tools are rebuilt.
