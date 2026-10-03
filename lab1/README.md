@@ -300,17 +300,21 @@ For each of the five devices, reconstruct:
 The objective is to distinguish what the **physical device** is from what the **broker sees as an
 MQTT client**.
 
-### Q4 — What changes when a gateway publishes on behalf of a device?
+### Q4 — What can the broker actually tell you about a failure?
 
-Open one recent `PUBLISH` for each of these three sources: `AC-1`, `CR-01` and `EM-MAIN`. For each
-one, put side by side the physical source named in the architecture and the MQTT client shown in the
-viewer.
+Use the paths you reconstructed in Q3 for `AC-1`, `CR-01` and `EM-MAIN`. Open one recent `PUBLISH`
+for each source and compare the physical device named in the architecture with the MQTT client visible
+in the viewer. `AC-1` publishes directly, whereas the other two reach MQTT through an intermediate
+component.
 
-`AC-1` reaches MQTT directly. `CR-01` and `EM-MAIN` do not. For each of those two translated paths,
-identify the intermediate component and explain why it is needed. Then consider this concrete
-situation: the physical sensor is still operating, but the intermediate component stops publishing.
-What would the application see at the broker? From MQTT traffic alone, could it distinguish a failed
-sensor from a failed gateway or translator? Explain what information is missing.
+Now focus on `CR-01`. Suppose the physical sensor continues to operate normally but `hygrolab-gw`
+stops publishing. What would an application connected only to the MQTT broker observe? Could it tell
+whether the sensor itself failed, the local link failed, or the gateway failed? State what additional
+observation would be needed to distinguish those cases.
+
+Repeat the reasoning for `EM-MAIN` and its Modbus-to-MQTT translator. Is the observation boundary the
+same? The aim is no longer to reconstruct the path—that was Q3—but to determine what can and cannot
+be inferred from the MQTT end of that path.
 
 <details>
 <summary><strong>◆ Going deeper — D2: the lab is not the plant</strong></summary>
@@ -632,10 +636,10 @@ and relate it to the MQTT rule given above. Then distinguish two statements:
 <details>
 <summary><strong>◆ Going deeper — D6: diagnose duplicate identities from observations only</strong></summary>
 
-Repeat the duplicate-client experiment from Q9, but this time pretend that the two programs are remote
-devices and do **not** use their terminal output as evidence. Start the first copy, wait until it has
-published normally, then start the second copy about ten seconds later. In the viewer, filter on
-`sensor-student` and use both **Packets** and **Clients**.
+Reuse the trace produced by Q9, but now pretend that the two programs are remote devices and that their
+terminal output is unavailable. In the viewer, filter on `sensor-student` and use only **Packets** and
+**Clients** as evidence. If your Q9 trace is too short to show the reconnect pattern clearly, rerun the
+experiment once, starting the second copy about ten seconds after the first.
 
 Build a diagnosis from observations only. Identify at least two concrete symptoms of the collision
 (for example repeated connections with the same client id, interruptions in the publication stream,
@@ -792,9 +796,9 @@ For each output field produced by the bridge, determine whether it is:
 - supplied later by another component in the path;
 - computed by your bridge.
 
-Use the actual input and output values to justify the classification. Then answer three concrete
-questions: what information can the bridge normalize reliably, what missing information can it not
-recover, and what would subscribers observe if the bridge stopped publishing for ten minutes?
+Use the actual input and output values to justify the classification. Then answer two concrete
+questions: what information can the bridge normalize reliably, and what missing information can it not
+recover from the source message?
 
 Finally, suppose an auditor challenges a value such as `pressure_bar = 6.89`. State which original
 value and which conversion information would have to be retained to reproduce and justify that
