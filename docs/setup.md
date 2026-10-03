@@ -14,7 +14,7 @@ Use the VM address and login provided for the course.
 On the VM:
 
 ```bash
-cd ~/IoT-Labs-UPPA/lab1
+cd ~/iot-labs/lab1
 docker compose up -d --build                       # starts the lab; the first time takes a few minutes
 docker compose ps --services --status running      # what is running
 docker compose exec workstation bash               # opens a shell in the workstation container
@@ -36,7 +36,7 @@ Open <http://localhost:8080> on your laptop (`relay:8080` inside the lab). It sh
 | a service is missing | it stopped or failed | `docker compose logs <service>`, then `docker compose up -d` |
 | the viewer does not open | no SSH tunnel | `ssh -L 8080:localhost:8080 ...`, or VS Code's *Ports* tab |
 | your client works but the viewer does not show it | you connected to the broker directly | host `relay`, port `1884` |
-| `mosquitto_sub` prints nothing | the topic/filter may not match what is published | check the filter and keep MQTT filters quoted, e.g. `-t 'hygrolab/#'` |
+| `mosquitto_sub` prints nothing | the topic/filter may not match, the simulated source may publish periodically, or another live client may be reusing the same Client ID | wait for one source period (10 s for `hygrolab`), check the quoted filter, and use a distinct `-i` for simultaneously running clients |
 | `is not valid JSON` | a missing comma or quote | the message gives line and column |
 | a program receives nothing | it subscribed before being connected | subscribe in `on_connect` |
 | the autoclave says `IDLE`, the router `OFF` | night or weekend at the plant | normal: note the time |

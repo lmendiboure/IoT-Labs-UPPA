@@ -25,10 +25,10 @@ OUTPUT_TOPICS = {
 }
 PSI_TO_BAR = 0.0689476
 
-# Which ChirpStack device is which probe of the inventory? The event names each probe in words.
+# Plant identifier <-> ChirpStack deviceName mapping (also documented in inventory.json).
 PROBES = {
-    # TODO: "<deviceName of the probe near the door>": "FRZ1-T1",
-    #       "<deviceName of the probe at the back>": "FRZ1-T2",
+    "frz1-probe-door": "FRZ1-T1",
+    "frz1-probe-back": "FRZ1-T2",
 }
 
 

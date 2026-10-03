@@ -2,30 +2,146 @@
   "enterprise": "Adour Composites",
   "site": "Tarnos",
   "devices": [
-    {"id": "FRZ1-T1", "area": "coldstore", "cell": "freezer-1", "class": "temperature probe", "vendor": "LoRaWAN cold-chain probe", "note": "near the door"},
-    {"id": "FRZ1-T2", "area": "coldstore", "cell": "freezer-1", "class": "temperature probe", "vendor": "LoRaWAN cold-chain probe", "note": "at the back"},
-    {"id": "FRZ1-DOOR", "area": "coldstore", "cell": "freezer-1", "class": "door contact", "vendor": "cold store controller"},
-    {"id": "CR-01", "area": "cleanroom", "cell": "layup-bay-1", "class": "environment sensor", "vendor": "Hygrolab"},
-    {"id": "CR-02", "area": "cleanroom", "cell": "layup-bay-2", "class": "environment sensor", "vendor": "Hygrolab"},
-    {"id": "CR-03", "area": "cleanroom", "cell": "kitting", "class": "environment sensor", "vendor": "Hygrolab"},
-    {"id": "AC-1", "area": "curing", "cell": "autoclave-1", "class": "machine", "vendor": "autoclave controller"},
-    {"id": "EM-AC1", "area": "curing", "cell": "autoclave-1", "class": "energy meter", "vendor": "sub-meter, read over Modbus"},
-    {"id": "OVEN-1", "area": "curing", "cell": "post-cure-oven", "class": "machine", "vendor": "oven controller, installed next month"},
-    {"id": "CNC-1", "area": "machining", "cell": "trimming-1", "class": "machine", "vendor": "CNC router adapter"},
-    {"id": "EM-MAIN", "area": "utilities", "cell": "main-switchboard", "class": "energy meter", "vendor": "main meter, read over Modbus"},
-    {"id": "CMP-1", "area": "utilities", "cell": "compressor-room", "class": "compressor", "vendor": "screw compressor controller"},
-    {"id": "WS-ROOF", "area": null, "cell": null, "class": "weather station", "vendor": "roof weather station", "note": "belongs to the site, not to an area"}
+    {
+      "id": "FRZ1-T1",
+      "area": "coldstore",
+      "cell": "freezer-1",
+      "class": "temperature probe",
+      "vendor": "LoRaWAN cold-chain probe",
+      "note": "near the door",
+      "chirpstack_device_name": "frz1-probe-door"
+    },
+    {
+      "id": "FRZ1-T2",
+      "area": "coldstore",
+      "cell": "freezer-1",
+      "class": "temperature probe",
+      "vendor": "LoRaWAN cold-chain probe",
+      "note": "at the back",
+      "chirpstack_device_name": "frz1-probe-back"
+    },
+    {
+      "id": "FRZ1-DOOR",
+      "area": "coldstore",
+      "cell": "freezer-1",
+      "class": "door contact",
+      "vendor": "cold store controller"
+    },
+    {
+      "id": "CR-01",
+      "area": "cleanroom",
+      "cell": "layup-bay-1",
+      "class": "environment sensor",
+      "vendor": "Hygrolab"
+    },
+    {
+      "id": "CR-02",
+      "area": "cleanroom",
+      "cell": "layup-bay-2",
+      "class": "environment sensor",
+      "vendor": "Hygrolab"
+    },
+    {
+      "id": "CR-03",
+      "area": "cleanroom",
+      "cell": "kitting",
+      "class": "environment sensor",
+      "vendor": "Hygrolab"
+    },
+    {
+      "id": "AC-1",
+      "area": "curing",
+      "cell": "autoclave-1",
+      "class": "machine",
+      "vendor": "autoclave controller"
+    },
+    {
+      "id": "EM-AC1",
+      "area": "curing",
+      "cell": "autoclave-1",
+      "class": "energy meter",
+      "vendor": "sub-meter, read over Modbus"
+    },
+    {
+      "id": "OVEN-1",
+      "area": "curing",
+      "cell": "post-cure-oven",
+      "class": "machine",
+      "vendor": "oven controller, installed next month"
+    },
+    {
+      "id": "CNC-1",
+      "area": "machining",
+      "cell": "trimming-1",
+      "class": "machine",
+      "vendor": "CNC router adapter"
+    },
+    {
+      "id": "EM-MAIN",
+      "area": "utilities",
+      "cell": "main-switchboard",
+      "class": "energy meter",
+      "vendor": "main meter, read over Modbus"
+    },
+    {
+      "id": "CMP-1",
+      "area": "utilities",
+      "cell": "compressor-room",
+      "class": "compressor",
+      "vendor": "screw compressor controller"
+    },
+    {
+      "id": "WS-ROOF",
+      "area": null,
+      "cell": null,
+      "class": "weather station",
+      "vendor": "roof weather station",
+      "note": "belongs to the site, not to an area"
+    }
   ],
   "needs": [
-    {"id": "N1", "text": "everything in the curing area",
-     "devices": ["AC-1", "EM-AC1", "OVEN-1"]},
-    {"id": "N2", "text": "every energy meter, whatever the area",
-     "devices": ["EM-AC1", "EM-MAIN"]},
-    {"id": "N3", "text": "everything in the cold store",
-     "devices": ["FRZ1-T1", "FRZ1-T2", "FRZ1-DOOR"]},
-    {"id": "N4", "text": "every production machine, for the OEE dashboard",
-     "devices": ["AC-1", "OVEN-1", "CNC-1"]},
-    {"id": "N5", "text": "everything in the autoclave-1 cell, for its quality record",
-     "devices": ["AC-1", "EM-AC1"]}
+    {
+      "id": "N1",
+      "text": "everything in the curing area",
+      "devices": [
+        "AC-1",
+        "EM-AC1",
+        "OVEN-1"
+      ]
+    },
+    {
+      "id": "N2",
+      "text": "every energy meter, whatever the area",
+      "devices": [
+        "EM-AC1",
+        "EM-MAIN"
+      ]
+    },
+    {
+      "id": "N3",
+      "text": "everything in the cold store",
+      "devices": [
+        "FRZ1-T1",
+        "FRZ1-T2",
+        "FRZ1-DOOR"
+      ]
+    },
+    {
+      "id": "N4",
+      "text": "every production machine, for the OEE dashboard",
+      "devices": [
+        "AC-1",
+        "OVEN-1",
+        "CNC-1"
+      ]
+    },
+    {
+      "id": "N5",
+      "text": "everything in the autoclave-1 cell, for its quality record",
+      "devices": [
+        "AC-1",
+        "EM-AC1"
+      ]
+    }
   ]
 }

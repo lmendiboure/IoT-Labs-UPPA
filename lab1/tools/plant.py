@@ -476,11 +476,15 @@ def chirpstack():
     fcnt = {p: random.Random(f"{SEED}-fcnt-{p}").randint(2000, 9000) + int(time.time() // 60) % 10000
             for p in PROBES}
     r = random.Random()
+    attempts = {p: 0 for p in PROBES}
     while True:
         for probe, (eui, name) in PROBES.items():
             t = every(60, 7 if probe == "T1" else 37)
+            attempts[probe] += 1
             fcnt[probe] += 1
-            if r.random() < 0.08:                         # lost on the radio (metal walls): never resent
+            # Teaching fault: deliberately suppress every fourth uplink so an fCnt gap is
+            # observable during the session. The 25% rate is intentionally unrealistic.
+            if attempts[probe] % 4 == 0:
                 continue
             heard = r.sample(GATEWAYS, r.choice([1, 1, 2]))
             batt = 87 if probe == "T1" else 64
