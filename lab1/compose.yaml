@@ -1,5 +1,5 @@
 # Lab 1 — IoT architecture and first MQTT messages.
-#   start:  docker compose up -d --build        (the first time takes a few minutes)
+#   start:  docker compose up -d --build
 #   work:   docker compose exec workstation bash
 #   stop:   docker compose down
 name: lab1

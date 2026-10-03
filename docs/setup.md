@@ -15,7 +15,7 @@ On the VM:
 
 ```bash
 cd ~/iot-labs/lab1
-docker compose up -d --build                       # starts the lab; the first time takes a few minutes
+docker compose up -d --build                       # starts the lab
 docker compose ps --services --status running      # what is running
 docker compose exec workstation bash               # opens a shell in the workstation container
 ```
