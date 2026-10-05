@@ -1,43 +1,49 @@
 # Lab 1 — IoT architecture and first MQTT messages.
-#   start:  sudo docker compose up -d --build
-#   work:   sudo docker compose exec workstation bash
-#   stop:   sudo docker compose down
-
+#   start:  docker compose up -d --build
+#   work:   docker compose exec workstation bash
+#   stop:   docker compose down
 name: lab1
 
+# On the UPPA VMs, http_proxy/https_proxy are defined in the host shell.
+# Compose forwards them to image builds. On a normal local machine these
+# variables are empty, so Docker accesses the Internet directly.
+x-tools-build: &tools-build
+  context: ./tools
+  args:
+    HTTP_PROXY: ${HTTP_PROXY:-${http_proxy:-}}
+    HTTPS_PROXY: ${HTTPS_PROXY:-${https_proxy:-}}
+    NO_PROXY: ${NO_PROXY:-${no_proxy:-}}
+
 services:
-  broker:
+  broker:                       # the MQTT broker: Eclipse Mosquitto, as used in industry
     image: eclipse-mosquitto:2.0
     volumes:
       - ./broker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
     restart: unless-stopped
 
-  relay:
-    build: ./tools
+  relay:                        # sits between every client and the broker; shows every packet
+    build: *tools-build
     image: lab1-tools:1
     command: python relay.py
     ports:
-      - "127.0.0.1:8080:8080"
-    depends_on:
-      - broker
+      - "127.0.0.1:8080:8080"   # local viewer; use an SSH tunnel when the lab runs on a VM
+    depends_on: [broker]
     restart: unless-stopped
 
-  plant:
-    build: ./tools
+  plant:                        # the Adour Composites plant: its devices, each in its vendor's way
+    build: *tools-build
     image: lab1-tools:1
     command: python plant.py
-    depends_on:
-      - relay
+    depends_on: [relay]
     restart: unless-stopped
 
-  workstation:
-    build: ./tools
+  workstation:                  # where you work: ./work is /work
+    build: *tools-build
     image: lab1-tools:1
     hostname: workstation
     command: sleep infinity
     working_dir: /work
     volumes:
       - ./work:/work
-    depends_on:
-      - relay
+    depends_on: [relay]
     restart: unless-stopped

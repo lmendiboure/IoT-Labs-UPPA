@@ -29,7 +29,7 @@ git clone <this repository's URL> ~/iot-labs      # once; for a new lab later: c
 cd ~/iot-labs/lab1 && docker compose up -d --build
 ```
 
-Then open the lab page ([Lab 1](lab1/)). [Working on your VM](docs/setup.md) contains the common VM, SSH, Docker and viewer setup.
+Then open the lab page ([Lab 1](lab1/)). [Working environment](docs/setup.md) explains the UPPA VM or local setup, Docker, and access to the viewer.
 
 *For the link between the labs and the lectures, see [the course map](docs/course.md). Adour
 Composites, its people and its data are fictional; the protocols, standards and orders of magnitude

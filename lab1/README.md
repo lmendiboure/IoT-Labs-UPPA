@@ -20,18 +20,18 @@ can — and cannot — be established from the data that finally reach applicati
 
 ## Preparation
 
-Follow [Working on your VM](../docs/setup.md) to connect to the VM and start the lab. Keep the
+Follow [Working environment](../docs/setup.md) to start the lab on the UPPA VM or on a local machine. Keep the
 **viewer** open at <http://localhost:8080>; MQTT traffic from the simulated plant should appear within
 a few seconds.
 
 Unless stated otherwise, commands run **inside the `workstation` container**, which already contains
-Python and the Mosquitto clients. From `~/iot-labs/lab1` on the VM, open it with:
+Python and the Mosquitto clients. From `lab1/` on the host machine, open it with:
 
 ```bash
 docker compose exec workstation bash
 ```
 
-The shell opens in `/work`. This directory is the same `lab1/work` directory visible on the VM:
+The shell opens in `/work`. This directory is the same `lab1/work` directory visible on the host:
 you may edit files with your usual VM editor, or inside the container with `nano` or `vim`. Open
 additional workstation shells with the same command when programs must run in parallel.
 
@@ -285,7 +285,7 @@ same?
 <summary><strong>◆ Going deeper — D2: the lab is not the plant</strong></summary>
 
 The relay is useful for teaching because it makes MQTT visible, but inserting it also changes what the
-broker can observe. On the VM, outside the `workstation` container, inspect recent broker log lines:
+broker can observe. On the host, outside the `workstation` container, inspect recent broker log lines:
 
 ```bash
 cd ~/iot-labs/lab1
@@ -338,7 +338,7 @@ Three roles are enough for now:
 - **ChirpStack** is the LoRaWAN network server used in the lab. It receives the forwarded radio data
   and exposes an application event through MQTT.
 
-A transmission from the probe toward the network is an **uplink**. From the VM, open another
+A transmission from the probe toward the network is an **uplink**. From the host, open another
 workstation shell with `docker compose exec workstation bash`, then run:
 
 ```bash
