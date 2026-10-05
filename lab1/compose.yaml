@@ -4,6 +4,18 @@
 #   stop:   docker compose down
 name: lab1
 
+# Proxy settings used only while building the lab image.
+# Compose accepts either upper- or lower-case proxy variables from the host VM.
+x-build-proxy: &build-proxy
+  HTTP_PROXY: ${HTTP_PROXY:-${http_proxy:-}}
+  HTTPS_PROXY: ${HTTPS_PROXY:-${https_proxy:-}}
+  NO_PROXY: ${NO_PROXY:-${no_proxy:-}}
+  ALL_PROXY: ${ALL_PROXY:-${all_proxy:-}}
+
+x-tools-build: &tools-build
+  context: ./tools
+  args: *build-proxy
+
 services:
   broker:                       # the MQTT broker: Eclipse Mosquitto, as used in industry
     image: eclipse-mosquitto:2.0
@@ -12,7 +24,7 @@ services:
     restart: unless-stopped
 
   relay:                        # sits between every client and the broker; shows every packet
-    build: ./tools
+    build: *tools-build
     image: lab1-tools:1
     command: python relay.py
     ports:
@@ -21,14 +33,14 @@ services:
     restart: unless-stopped
 
   plant:                        # the Adour Composites plant: its devices, each in its vendor's way
-    build: ./tools
+    build: *tools-build
     image: lab1-tools:1
     command: python plant.py
     depends_on: [relay]
     restart: unless-stopped
 
   workstation:                  # where you work: ./work is /work
-    build: ./tools
+    build: *tools-build
     image: lab1-tools:1
     hostname: workstation
     command: sleep infinity
