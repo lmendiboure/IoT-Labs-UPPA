@@ -638,69 +638,87 @@ Topic hierarchy is part of that interface: it determines which groups of data ca
 For example, `plant/<area>/<cell>/<device>/...` makes `plant/curing/#` natural but may make cross-area
 queries harder. The useful hierarchy therefore depends on the queries that matter.
 
-### Q10 — Make the current interoperability problems explicit
+### Q10 — Same information, different representations
 
-Start with two sources that both contain temperature information: one recent freezer event and
-`hygrolab/CR-01/temperature`. Compare only these two first. Look at their topic names and payloads and
-identify at least two differences an application would have to understand before it could treat the
-measurements uniformly.
+Before reorganizing anything, compare what applications actually receive.
 
-Then add one recent message from the main energy meter (`modbus2mqtt/meter_main/...`) and from the
-compressor (`compressors/CMP1`). Across the four sources, identify at least **four concrete
-incompatibilities** in total. Look specifically at naming, units, timestamps, whether several
-quantities are grouped in one payload, and where device identifiers appear. For every incompatibility,
-point to the concrete pair of messages or conventions that exhibits it.
+Start with two messages that both contain a **temperature** measurement:
+
+- one recent `PUBLISH` on `hygrolab/CR-01/temperature`;
+- one recent ChirpStack uplink from `FRZ1-T1`.
+
+Open both messages in the viewer. For each one, locate the physical device identifier, the measured
+value, its unit, the measurement time if one is present, and the MQTT topic carrying the message. The
+two sources ultimately report the same kind of physical quantity, but they expose it very differently.
+
+Then add one recent message from the main energy meter (`modbus2mqtt/meter_main/...`) and one from the
+compressor (`compressors/CMP1`). Imagine that you have to write **one ingestion program** for all four
+sources.
+
+**Q10.** Identify at least **four concrete differences** that would force that program to contain
+source-specific handling. For each difference, point to the messages that reveal it. In particular,
+compare where the value is found, how the device is identified, whether units and timestamps are
+explicit, and whether one message contains one quantity or several.
+
+The objective is not yet to fix these differences: first make the existing heterogeneity visible.
 
 
-### Design a topic hierarchy for the plant
+### Q11 — Propose a topic hierarchy and test it
 
-`work/inventory.json` describes 13 devices, their location and their class. Read it before choosing a
-hierarchy. Five applications already exist or are planned:
+The current topics mostly reflect the technologies that produced the data (`hygrolab/...`,
+`modbus2mqtt/...`, `compressors/...`, ChirpStack events). Applications would be easier to write if the
+plant exposed a more regular naming convention.
 
-| Need | The application wants |
-|---|---|
-| N1 | everything in the curing area |
-| N2 | every energy meter, whatever the area |
-| N3 | everything in the cold store |
-| N4 | every production machine, for the production-performance dashboard |
-| N5 | everything in the autoclave-1 cell, for its quality record |
+Read `work/inventory.json`, which gives each device an `area`, a `cell` and a `class`. Propose a topic
+hierarchy for normalized plant data. There is no unique correct tree: the important point is that each
+level has a clear meaning and is used consistently.
 
-Propose a consistent MQTT topic hierarchy for the plant. You do not need to enumerate every possible
-measurement field; the important choice here is the order and meaning of the levels used to locate a
-device and its data. Check the design on a few deliberately different cases, including `FRZ1-T1`,
-`AC-1`, `EM-AC1`, `CMP-1` and `WS-ROOF`.
+Start by writing the **exact topic** you would use for these four normalized measurements:
 
-### Q11 — Which queries does your hierarchy make easy?
+- temperature from `CR-01`;
+- temperature from `FRZ1-T1`;
+- one energy measurement from `EM-MAIN`;
+- pressure from `CMP-1`.
 
-Use your proposed hierarchy to write subscription filters for N1–N5. Try to retrieve exactly the
-required devices and avoid a list of one filter per device; if a need genuinely requires two filters,
-that is already useful information about the structure you chose.
+For example, your hierarchy might contain dimensions such as site, area, cell, device, class or
+measurement type, but you must choose their order yourself.
 
-Then consider a new request that was not in the original requirements: an engineer wants **every
-source that reports temperature on the site** — including the freezer probes, cleanroom sensors,
-autoclave and roof weather station — regardless of area. First decide whether your topic convention actually
-encodes the measurement type in a position that MQTT filters can use. If it does, write the required
-filter or filters. If it does not, say explicitly why this request cannot be expressed from the topic
-name alone and what an application would have to inspect instead. Compare this with N1–N5 and explain
-which kinds of query your hierarchy naturally favours and which become awkward.
+Now test the hierarchy rather than judging it only by appearance. Write the MQTT subscription filter
+(or filters, if one is not enough) that you would use for each of these requests:
 
-### Normalize two sources
+1. every measurement produced by `CR-01`;
+2. everything produced in the `curing` area;
+3. every energy meter, regardless of where it is installed;
+4. every temperature measurement on the site, regardless of device or area;
+5. only the pressure measurement from `CMP-1`.
 
-A common topic hierarchy solves only **addressing**. Payloads may still disagree on units, field names
-and timestamps. Here a **bridge** subscribes to existing messages, converts them and republishes a
-common form. Those conversions become part of the resulting data's meaning and lineage.
+**Q11.** Which requests are naturally expressed by your hierarchy? Which require several filters or
+cannot be expressed from topic names alone? If an important request is awkward, modify the hierarchy
+once and see what becomes easier and what becomes harder. This trade-off is the point of the exercise:
+MQTT wildcards can select levels of a tree, but one tree cannot necessarily make every possible query
+convenient.
+
+Keep the exact topic names you chose for `CMP-1` pressure and `FRZ1-T1` temperature. The bridge in the
+next step will publish to those topics; `FRZ1-T2` will use the same pattern as `FRZ1-T1`.
+
+### Use your hierarchy: normalize two sources
+
+Q11 gave the data a regular **address**, but the payloads are still heterogeneous. A **bridge** can
+subscribe to existing messages, convert selected fields and republish them using the topics you just
+designed. Those conversions become part of the resulting data's meaning and lineage.
 
 `work/bridge.py` already contains the MQTT callbacks, JSON parsing, timestamp conversion and freezer
 decoding. Complete only the topic choices and conversions, in two passes.
 
-**First, normalize only the compressor.** Choose its output topic from your Q11 hierarchy and replace
-the single `pressure_bar = None` line with the psi-to-bar conversion. The compressor input topic and
+**First, normalize only the compressor.** Copy the `CMP-1` pressure topic you chose in Q11 into
+`OUTPUT_TOPICS`, then replace the single `pressure_bar = None` line with the psi-to-bar conversion. The compressor input topic and
 Unix-to-ISO timestamp conversion are already provided. Use `1 psi = 0.0689476 bar` and keep at least
 two decimals. Run the bridge and confirm in the viewer that you can place one original compressor
 message beside its normalized output.
 
-**Then add the freezer probes.** Choose their two output topics and set `FREEZER_INPUT` to one MQTT
-wildcard filter matching the two ChirpStack uplink topics. The mapping between plant identifiers
+**Then add the freezer probes.** Copy your `FRZ1-T1` temperature topic into `OUTPUT_TOPICS` and use
+the same pattern for `FRZ1-T2`. Set `FREEZER_INPUT` to one MQTT wildcard filter matching the two
+ChirpStack uplink topics. The mapping between plant identifiers
 (`FRZ1-T1`, `FRZ1-T2`) and ChirpStack `deviceName` values is provided, and the starter code already
 calls your decoder from Part 3 and uses the ChirpStack reception time as `measured_at`.
 
@@ -748,9 +766,11 @@ can be selected easily. For example, you might explore a shape such as
 `plant/by-measure/<measurement>/...`; you still have to decide which device and location levels follow
 it.
 
-Write concrete Design A and Design B topics for `FRZ1-T1`, `CR-01`, `AC-1`, `EM-AC1`, `CMP-1` and
-`WS-ROOF`. Then make a small comparison table for N1–N5 plus **all temperature sources**: how many MQTT
-filters are required by each design? Mark any request that cannot be expressed from topics alone.
+Write concrete Design A and Design B topics for `FRZ1-T1`, `CR-01`, `EM-MAIN`, `CMP-1` and a device
+in the `curing` area. Then compare the two designs using the same five requests as Q11: one device,
+one area, every energy meter, every temperature measurement, and one specific measurement. For each
+request, count how many MQTT filters are needed and mark any request that cannot be expressed from
+topics alone.
 
 Finally, explain the trade-off. Which dimensions are worth encoding in a topic because subscribers
 route on them frequently, and which belong more naturally in payload metadata? If making every query

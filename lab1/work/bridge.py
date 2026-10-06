@@ -16,11 +16,12 @@ from decode import decode
 HOST = os.getenv("MQTT_HOST", "relay")
 PORT = int(os.getenv("MQTT_PORT", "1884"))
 
-# Choose output topics consistent with the hierarchy proposed in Q11.
+# Copy the exact normalized topics designed in Q11.
+# FRZ1-T2 should follow the same pattern as FRZ1-T1.
 OUTPUT_TOPICS = {
-    "CMP-1": "",       # TODO: compressor output topic
-    "FRZ1-T1": "",     # TODO: freezer probe output topic
-    "FRZ1-T2": "",     # TODO: freezer probe output topic
+    "CMP-1": "",       # TODO: Q11 topic for compressor pressure
+    "FRZ1-T1": "",     # TODO: Q11 topic for freezer temperature
+    "FRZ1-T2": "",     # TODO: same pattern for the second probe
 }
 
 COMPRESSOR_INPUT = "compressors/CMP1"
