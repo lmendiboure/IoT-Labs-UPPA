@@ -31,22 +31,28 @@ docker compose exec workstation bash
 
 In the viewer's **Packets** tab, enable **show protocol details**.
 
-The first two parts use a synthetic **cure record**: one quality record produced when an autoclave
-cycle completes. For example:
+In Lab 1 you published test messages directly with `mosquitto_pub`. Here we want to follow the **same
+application record** through several MQTT experiments, so two small Python programs play the same MQTT
+roles in a more reproducible way. **The network architecture has not changed:** they are ordinary MQTT
+clients, and their packets appear in the same viewer as before.
+
+- `cure_publish.py` is the publisher. Each time you run it, it creates **one** synthetic record for a
+  completed autoclave cycle, publishes it, and exits;
+- `cure_recorder.py` is the subscriber. It represents the quality application that receives those
+  records and stays connected until you stop it.
+
+For example, running `python cure_publish.py CR-101 --qos 0` later in Q1 will publish one MQTT message
+on `quality/autoclave/AC-1/cure-records` whose payload contains something like:
 
 ```json
 {"record_id":"CR-101","batch":"BATCH-101","recipe":"CFRP-180C","result":"PASS", ...}
 ```
 
-The `record_id` lets us recognise the same business record across several protocol exchanges. These
-records use the topic `quality/autoclave/AC-1/cure-records`.
-
-In Lab 1 you used `mosquitto_pub` and `mosquitto_sub` directly. Here, two small Python programs make it
-easier to generate and follow the same cure record across repeated experiments. They are ordinary MQTT
-clients:
-
-- `cure_publish.py` publishes one chosen cure record and exits;
-- `cure_recorder.py` represents the quality application and stays connected to receive records.
+This record is **not generated continuously by the plant**. It appears when you run the publisher. At
+that moment you will see the corresponding MQTT traffic in the same viewer at
+<http://localhost:8080>; filtering the packet list with `CR-101` or `cure-records` lets you follow that
+record from the publisher to the broker and then to the quality application. The `record_id` is only an
+application-level identifier that helps us recognise the same record across these exchanges.
 
 
 ## Part 1 — What does an MQTT acknowledgement actually acknowledge?
