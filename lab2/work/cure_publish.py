@@ -32,7 +32,7 @@ connected = False
 
 def on_connect(client, userdata, flags, reason_code, properties=None):
     global connected
-    connected = int(reason_code) == 0
+    connected = reason_code == 0
 
 c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="cure-source", protocol=mqtt.MQTTv311)
 c.on_connect = on_connect

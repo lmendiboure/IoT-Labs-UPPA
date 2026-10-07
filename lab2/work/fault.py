@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Arm a one-shot packet drop in the Lab 2 MQTT relay (optional extension)."""
+"""Arm or inspect a one-shot packet drop in the Lab 2 MQTT relay."""
 import argparse
 import json
 import os

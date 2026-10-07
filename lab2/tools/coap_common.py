@@ -132,4 +132,4 @@ def new_mid() -> int:
 
 
 def new_token() -> bytes:
-    return secrets.token_bytes(2)
+    return secrets.token_bytes(4)
