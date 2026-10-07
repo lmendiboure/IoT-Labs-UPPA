@@ -12,11 +12,11 @@ export http_proxy=http://cache.univ-pau.fr:3128 https_proxy=http://cache.univ-pa
 
 The proxy variables are normally already available in the VM environment. If `git clone`, `git pull`, or a Docker build cannot reach the Internet, run the command above in the shell before continuing. The lab's Compose file automatically forwards these variables to image builds; no proxy is stored in the Docker images.
 
-Clone the repository once, then enter the lab directory:
+Clone the repository once, then enter the directory of the session you are working on:
 
 ```bash
-git clone <this repository's URL> ~/iot-labs
-cd ~/iot-labs/lab1
+git clone <this repository's URL> ~/IoT-Labs-UPPA
+cd ~/iot-labs/lab1        # or lab2 for the second session, or labx for the xth 
 ```
 
 ### Open the viewer from your own computer
@@ -33,11 +33,11 @@ If you use **VS Code Remote – SSH**, connect to the VM, open the repository, a
 
 ## If you run the labs locally
 
-You need Git, Docker, and Docker Compose. Clone the repository and enter the lab directory:
+You need Git, Docker, and Docker Compose. Clone the repository and enter the directory of the session you are working on:
 
 ```bash
-git clone <this repository's URL> ~/iot-labs
-cd ~/iot-labs/lab1
+git clone <this repository's URL> ~/IoT-Labs-UPPA
+cd ~/iot-labs/lab1        # or lab2 for the second session
 ```
 
 No SSH tunnel is needed. Once the lab is running, open <http://localhost:8080> directly.
@@ -46,7 +46,7 @@ The Compose file uses proxy variables only when they exist in the host environme
 
 ## Start the lab
 
-From `lab1/` on the host machine (the VM or your local machine):
+From the current lab directory (`lab1/`, `lab2/`, ... ) on the host machine:
 
 ```bash
 docker compose up -d --build
@@ -61,7 +61,7 @@ The exercises themselves run in the **workstation container**, which already con
 docker compose exec workstation bash
 ```
 
-The shell starts in `/work`. This is the same directory as `lab1/work` on the host. You may edit files with your usual host editor, or directly inside the container with `nano` or `vim`. Open additional workstation shells when publishers and subscribers must run concurrently.
+The shell starts in `/work`. This is the same `work/` directory inside the current lab on the host. You may edit files with your usual host editor, or directly inside the container with `nano` or `vim`. Open additional workstation shells when publishers and subscribers must run concurrently.
 
 To stop the lab:
 
@@ -69,7 +69,7 @@ To stop the lab:
 docker compose down
 ```
 
-Files under `lab1/work` are stored on the host and are not removed by `docker compose down`.
+Files under the current lab's `work/` directory are stored on the host and are not removed by `docker compose down`.
 
 ## Viewer
 
@@ -79,7 +79,7 @@ The viewer shows MQTT traffic passing through the lab relay — **not all traffi
 
 | You see | It usually means | Try |
 |---|---|---|
-| `no configuration file provided` | you are not in the lab directory | `cd ~/iot-labs/lab1` |
+| `no configuration file provided` | you are not in a lab directory | `cd ~/iot-labs/lab1` or the directory of the current session |
 | `git` or the build cannot reach the Internet on an UPPA VM | the proxy is not present in the current shell | check `env | grep -i proxy`, then export the UPPA proxy shown above |
 | `failed to fetch anonymous token` / `auth.docker.io` | Docker itself cannot reach Docker Hub | retry once; if it persists, report the VM rather than changing the lab files |
 | a service is missing | it stopped or failed | `docker compose logs <service>`, then `docker compose up -d` |

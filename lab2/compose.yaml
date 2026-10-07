@@ -1,0 +1,50 @@
+# Lab 2 — MQTT delivery/session experiments plus a small CoAP endpoint.
+name: lab2
+
+x-tools-build: &tools-build
+  context: ./tools
+  args:
+    HTTP_PROXY: ${HTTP_PROXY:-${http_proxy:-}}
+    HTTPS_PROXY: ${HTTPS_PROXY:-${https_proxy:-}}
+    NO_PROXY: ${NO_PROXY:-${no_proxy:-}}
+
+services:
+  broker:
+    image: eclipse-mosquitto:2.0
+    volumes:
+      - ./broker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  relay:
+    build: *tools-build
+    image: lab2-tools:1
+    command: python relay.py
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on: [broker]
+    restart: unless-stopped
+
+  plant:
+    build: *tools-build
+    image: lab2-tools:1
+    command: python plant.py
+    depends_on: [relay]
+    restart: unless-stopped
+
+  ac1-edge:
+    build: *tools-build
+    image: lab2-tools:1
+    command: python state_service.py
+    depends_on: [relay]
+    restart: unless-stopped
+
+  workstation:
+    build: *tools-build
+    image: lab2-tools:1
+    hostname: workstation
+    command: sleep infinity
+    working_dir: /work
+    volumes:
+      - ./work:/work
+    depends_on: [relay, ac1-edge]
+    restart: unless-stopped
