@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MQTT quality-recorder client used in Lab 2."""
+"""Starter for the idempotent quality-recorder extension."""
 import argparse
 import json
 import os
@@ -27,6 +27,16 @@ def has_session(flags):
     return bool(getattr(flags, "session_present", False))
 
 
+def already_recorded(log_path, record_id):
+    """Return True if record_id already appears in the JSONL audit log."""
+    if not log_path or not os.path.exists(log_path):
+        return False
+
+    # TODO: read the existing JSONL records and return True when record_id
+    # has already been stored. Ignore empty or malformed lines.
+    return False
+
+
 def on_connect(client, userdata, flags, reason_code, properties=None):
     present = has_session(flags)
     print(f"connected client_id={a.client_id} persistent={a.persistent} session_present={present}")
@@ -49,6 +59,9 @@ def on_message(client, userdata, msg):
         rid = "?"
     print(f"RECEIVED record_id={rid} qos={msg.qos} dup={bool(msg.dup)} retain={bool(msg.retain)}")
     if a.log:
+        if already_recorded(a.log, rid):
+            print(f"SKIPPED record_id={rid}: already present in application log")
+            return
         row = {
             "received_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
             "record_id": rid,

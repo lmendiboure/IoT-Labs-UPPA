@@ -13,6 +13,7 @@ services:
     image: eclipse-mosquitto:2.0
     volumes:
       - ./broker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      # - broker-data:/mosquitto/data
     restart: unless-stopped
 
   relay:
@@ -48,3 +49,6 @@ services:
       - ./work:/work
     depends_on: [relay, ac1-edge]
     restart: unless-stopped
+
+volumes:
+  broker-data:

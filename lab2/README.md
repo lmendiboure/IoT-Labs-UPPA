@@ -22,7 +22,7 @@ From `lab2/`, start the stack:
 docker compose up -d --build
 ```
 
-As in Lab 1, keep the **viewer** open at <http://localhost:8080> and run student commands inside the
+As in Lab 1, keep the **viewer** open at <http://localhost:8080> and run the commands below inside the
 `workstation` container:
 
 ```bash
@@ -41,13 +41,13 @@ cycle completes. For example:
 The `record_id` lets us recognise the same business record across several protocol exchanges. These
 records use the topic `quality/autoclave/AC-1/cure-records`.
 
-In Lab 1 you used `mosquitto_pub` and `mosquitto_sub` directly. Here, two small Python programs are
-provided for reproducible experiments. They are ordinary MQTT clients:
+In Lab 1 you used `mosquitto_pub` and `mosquitto_sub` directly. Here, two small Python programs make it
+easier to generate and follow the same cure record across repeated experiments. They are ordinary MQTT
+clients:
 
 - `cure_publish.py` publishes one chosen cure record and exits;
 - `cure_recorder.py` represents the quality application and stays connected to receive records.
 
-You do not need to modify them unless a *Going deeper* question asks you to.
 
 ## Part 1 — What does an MQTT acknowledgement actually acknowledge?
 
@@ -207,7 +207,7 @@ same business record after reconnect or retransmission.
 ## Part 2 — What state survives when the application disconnects?
 
 Q3 used a clean client: when it returned, nothing was waiting. MQTT can also keep **client-specific
-session state** across connections. In the provided recorder, `--persistent` requests that behaviour.
+session state** across connections. With `--persistent`, the recorder requests that behaviour.
 
 ### Leave a persistent subscriber offline
 
@@ -356,11 +356,13 @@ The session survived several client disconnects; now the broker itself has resta
 <details>
 <summary><strong>◆ Going deeper — D3: make broker state survive its restart</strong></summary>
 
-Enable Mosquitto persistence and add the required persistent volume. Repeat Q10 with a fresh Client ID
-and fresh cure records.
+Enable Mosquitto persistence in `broker/mosquitto.conf` and set its persistence directory to
+`/mosquitto/data/`. Then mount the `broker-data` volume at `/mosquitto/data` in the broker service of
+`compose.yaml`.
 
-Show whether the session now survives and explain why “stored by one broker” is still weaker than a
-complete durability strategy.
+Recreate the stack, repeat Q10 with a fresh Client ID and fresh cure records, and check whether the
+session now survives the broker restart. Why is “stored by one broker” still weaker than a complete
+durability strategy?
 </details>
 
 <details>
@@ -435,11 +437,12 @@ python check_audit.py audit.jsonl
 <details>
 <summary><strong>◆ Going deeper — D5: make the application idempotent</strong></summary>
 
-Copy `cure_recorder.py` and change only its storage logic so an already-recorded `record_id` is not
-appended again. Repeat the dropped-`PUBACK` experiment.
+Open `cure_recorder_idempotent.py` and complete `already_recorded()`. The recorder should still receive
+MQTT retransmissions, but it must not append a second application record when the same `record_id` is
+already present in its JSONL log.
 
-Does MQTT still retransmit? What application state would have to be durable if duplicate protection
-must survive an application crash?
+Repeat the dropped-`PUBACK` experiment with this recorder. Does MQTT still retransmit? What application
+state would have to be durable if duplicate protection must survive an application crash?
 </details>
 
 ## Part 3 — What changes when the application asks for the current state?
@@ -451,8 +454,8 @@ MQTT:  lab2/autoclave/AC-1/live
 CoAP:  coap://ac1-edge/state
 ```
 
-The MQTT path publishes periodically. `coap_get.py` is a small provided CoAP client: one execution
-sends one GET request, prints the exchange and exits. You are not expected to know CoAP beforehand.
+The MQTT path publishes periodically. `coap_get.py` sends one CoAP GET request, prints the exchange
+and exits. You are not expected to know CoAP beforehand.
 
 ### Observe the periodic MQTT state
 
