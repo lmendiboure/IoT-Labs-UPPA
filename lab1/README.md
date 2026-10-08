@@ -36,7 +36,11 @@ you may edit files with your usual VM editor, or inside the container with `nano
 additional workstation shells with the same command when programs must run in parallel.
 
 The viewer displays MQTT traffic passing through the lab relay; simulated clients therefore connect to
-`relay:1884` rather than directly to the broker.
+`relay:1884` rather than directly to the broker. Its search field filters individual packet rows: clear
+an earlier search when you switch to another topic or client.
+
+Your report should answer **Q1–Q15**. The instructions between the questions guide the experiments;
+you do not need to describe every command or intermediate observation.
 
 ---
 
@@ -92,12 +96,11 @@ the broker and `↓` a packet travelling away from it.
 
 ### Q1 — Reconstruct the exchange you just generated
 
-Follow your two terminals in the **Packets** tab. Starting with the subscriber connection and ending
-with the message received by that subscriber, reconstruct the sequence you can actually observe.
-Which client installed the subscription? Which topic did it request? Which client later published the
-message? Where, in this chain, is the decision made to forward the publication to the subscriber?
+Using the packet trace, reconstruct how the subscription was established and how the message reached
+`lab-subscriber`. Identify the subscribing and publishing clients, the requested topic, and the component
+that decided to forward the publication. Relate these steps to the three roles in the diagram.
 
-Relate the trace to the three roles in the figure above. Then stop the subscriber with `Ctrl+C`.
+Stop `lab-subscriber` with `Ctrl+C` before continuing.
 
 ### From one topic to several
 
@@ -158,8 +161,9 @@ The cleanroom simulator publishes six measurements (temperature and humidity for
 Stop the command with `Ctrl+C` before testing the next filter; reuse `filter-observer` sequentially,
 not in several terminals at once.
 
-Some listed topics may not currently be produced, so use the matching rule rather than absence of
-traffic as evidence. Explain at least two non-obvious matches level by level.
+Some listed topics may not currently be produced, so the absence of a message is not proof that a
+filter cannot match that topic. In your report, give the matches predicted by each filter and explain
+at least two less obvious cases, level by level, using the MQTT matching rules.
 
 <details>
 <summary><strong>◆ Going deeper — D1: what the broker says about itself</strong></summary>
@@ -266,20 +270,16 @@ For each of the five devices, reconstruct:
 4. one concrete MQTT topic carrying data from that device.
 
 
+For the next question, revisit the paths of `AC-1`, `CR-01` and `EM-MAIN` from Q3. Open one recent
+`PUBLISH` for each source. Compare the physical device in the architecture with the MQTT client shown
+in the viewer: `AC-1` publishes directly, while the other two use intermediate components.
+
 ### Q4 — What can the broker actually tell you about a failure?
 
-Use the paths you reconstructed in Q3 for `AC-1`, `CR-01` and `EM-MAIN`. Open one recent `PUBLISH`
-for each source and compare the physical device named in the architecture with the MQTT client visible
-in the viewer. `AC-1` publishes directly, whereas the other two reach MQTT through an intermediate
-component.
-
-Now focus on `CR-01`. Suppose the physical sensor continues to operate normally but `hygrolab-gw`
-stops publishing. What would an application connected only to the MQTT broker observe? Could it tell
-whether the sensor itself failed, the local link failed, or the gateway failed? State what additional
-observation would be needed to distinguish those cases.
-
-Repeat the reasoning for `EM-MAIN` and its Modbus-to-MQTT translator. Is the observation boundary the
-same?
+Suppose `CR-01` is still operating but `hygrolab-gw` stops publishing. What would an application connected
+only to MQTT observe? Can it distinguish a failed sensor, local link or gateway from that observation?
+Explain what additional information would be needed, then consider the same problem for `EM-MAIN` and
+its Modbus-to-MQTT translator.
 
 <details>
 <summary><strong>◆ Going deeper — D2: the lab is not the plant</strong></summary>
@@ -569,17 +569,15 @@ python sensor.py
 
 Let several messages appear and inspect one of them in the viewer.
 
+Leave the first `sensor.py` running. In a second `workstation` shell, start another copy without
+changing `NAME`. In the viewer, filter on `sensor-student`, then observe the **Clients** tab and both
+terminals for about 30 seconds. Keep both processes running long enough to observe how the connection state evolves.
+
 ### Q9 — Observe what happens when two connections reuse one client id
 
-Keep your first `sensor.py` running. From a second `workstation` shell, start a second copy without
-changing `NAME`. Filter the viewer on `sensor-student`, then watch the **Clients** tab and both terminals
-for roughly 30 seconds.
-
-Describe the sequence you observe when the two processes repeatedly try to use the same client id,
-and relate it to the MQTT rule given above. Then distinguish two statements:
-
-1. what `sensor-student` allows the broker to distinguish;
-2. what seeing that client id does **not** establish about the identity of the physical sender.
+Describe the connection behaviour you observed and relate it to the MQTT rule above. Explain what
+`sensor-student` identifies for the broker, and why seeing that client id does not prove the identity
+of the physical sender.
 
 <details>
 <summary><strong>◆ Going deeper — D6: diagnose duplicate identities from observations only</strong></summary>
@@ -655,12 +653,10 @@ Then add one recent message from the main energy meter (`modbus2mqtt/meter_main/
 compressor (`compressors/CMP1`). Imagine that you have to write **one ingestion program** for all four
 sources.
 
-**Q10.** Identify at least **four concrete differences** that would force that program to contain
-source-specific handling. For each difference, point to the messages that reveal it. In particular,
-compare where the value is found, how the device is identified, whether units and timestamps are
-explicit, and whether one message contains one quantity or several.
-
-The objective is not yet to fix these differences: first make the existing heterogeneity visible.
+Identify at least **four concrete differences** that would require source-specific handling in
+that program. Support each difference with the messages you inspected. Consider where values
+are found, how devices are identified, whether units and timestamps are explicit, and whether messages
+contain one measurement or several. At this stage, describe the differences rather than fixing them.
 
 
 ### Q11 — Propose a topic hierarchy and test it
@@ -692,11 +688,10 @@ Now test the hierarchy rather than judging it only by appearance. Write the MQTT
 4. every temperature measurement on the site, regardless of device or area;
 5. only the pressure measurement from `CMP-1`.
 
-**Q11.** Which requests are naturally expressed by your hierarchy? Which require several filters or
-cannot be expressed from topic names alone? If an important request is awkward, modify the hierarchy
-once and see what becomes easier and what becomes harder. This trade-off is the point of the exercise:
-MQTT wildcards can select levels of a tree, but one tree cannot necessarily make every possible query
-convenient.
+Present the four topic names you chose and the filters for the five requests above. Explain which
+requests are easy to express and which need several filters or information absent
+from the topic. If a request is awkward, try one revision of the hierarchy and explain what becomes
+easier and what becomes harder. A single topic tree cannot necessarily make every query convenient.
 
 Keep the exact topic names you chose for `CMP-1` pressure and `FRZ1-T1` temperature. The bridge in the
 next step will publish to those topics; `FRZ1-T2` will use the same pattern as `FRZ1-T1`.
@@ -737,25 +732,19 @@ Verify the compressor input/output pair first, then add and verify the freezer p
 
 ### Q12 — Compare an original message with the value produced by your bridge
 
-Choose one compressor message and one `FRZ1-T1` message for which you can also find the corresponding
-output from your bridge. Use the source timestamp to pair them: the compressor's Unix `timestamp`
-becomes your ISO `measured_at`, while the freezer event's ChirpStack `time` becomes its output
-`measured_at`. Filtering the viewer on `bridge-student` helps isolate the republished messages. Keep the
-input/output pairs together so that you are comparing the same observation.
+Choose a compressor message and an `FRZ1-T1` message for which you can find the corresponding bridge
+outputs. Match the pairs by timestamp: the compressor's Unix `timestamp` becomes `measured_at` in ISO
+format, and the freezer event's ChirpStack `time` becomes its output `measured_at`.
 
-For each output field produced by the bridge, determine whether it is:
+In the viewer, use the original topic to find each input, then switch the filter to `bridge-student`
+to find its output. A filter on `bridge-student` hides the original publications. Keep the input and
+output values from the **same** observation together for the comparison below.
 
-- directly measured by the physical device;
-- supplied later by another component in the path;
-- computed by your bridge.
-
-Use the actual input and output values to justify the classification. Then answer two concrete
-questions: what information can the bridge normalize reliably, and what missing information can it not
-recover from the source message?
-
-Finally, suppose an auditor challenges a value such as `pressure_bar = 6.89`. State which original
-value and which conversion information would have to be retained to reproduce and justify that
-normalized value.
+Use those two input/output pairs to classify each output field as **measured by the device**,
+**added elsewhere in the path**, or **computed by the bridge**. Support the classification with the
+values you observed. What can the bridge normalize reliably, and what missing information can it not
+recover? If an auditor challenges `pressure_bar = 6.89`, which original value and conversion information
+would be needed to reproduce it?
 
 <details>
 <summary><strong>◆ Going deeper — D8: can one tree make every query easy?</strong></summary>
@@ -799,22 +788,22 @@ the value is the **last value remembered by the broker**, not necessarily a fres
 For the experiments in this part, enable **show protocol details** in the viewer. Retained `PUBLISH`
 packets are then marked `retain`, and the Clients tab exposes the connection information used below.
 
-### Q13 — Determine what a new subscriber learns immediately
+### Observe a new subscription
 
-Stop any broad `#` subscription you currently have. Start a fresh one:
+Stop any broad `#` subscription still running, then start a new subscriber:
 
 ```bash
 mosquitto_sub -h relay -p 1884 -i retained-observer -t '#' -v
 ```
 
-Let the subscriber run only briefly, then stop it so that the first burst is easy to inspect. In the
-viewer, distinguish messages marked as retained from periodic publications that happened to arrive at
-the same time.
+Let it run briefly and stop it with `Ctrl+C`. In the viewer, distinguish the retained publications
+sent on subscription from ordinary periodic messages arriving at about the same time.
 
-Choose a few retained messages and interpret what a new application would learn from them without
-waiting for the original producer. Then pick one retained measurement or state that could be stale:
-what timestamp, age or independent signal would you need before treating that stored value as current
-evidence rather than simply the last value the broker remembers?
+### Q13 — Determine what a new subscriber learns immediately
+
+Choose a few retained messages. What information can a new application obtain immediately, without
+waiting for the next sensor publication? For one value that could be stale, explain what timestamp,
+age or independent observation would be needed before trusting it as current evidence.
 
 ### Add an online status and a last will
 
@@ -832,7 +821,7 @@ c.connect(HOST, PORT, keepalive=KEEPALIVE_S)
 c.publish(STATUS, "online", retain=True)
 ```
 
-Complete the only two remaining `TODO` lines in `sensor.py`:
+Complete the two `TODO` lines for status handling in `sensor.py`:
 
 - before connecting, register `offline` as a retained last will on `lab/sensors/student/status`;
 - after connecting, publish `online` on the same topic and retain that status.
