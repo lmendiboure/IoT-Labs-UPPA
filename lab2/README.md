@@ -29,7 +29,7 @@ all `python`, `mosquitto_pub` and `mosquitto_sub` commands from this shell. Name
 workstation shells with the same `docker compose exec workstation bash` command when two programs must
 run at the same time.
 
-Keep the **viewer** open at <http://localhost:8080>. In its **Packets** tab, enable **show protocol details**.
+Keep the **viewer** open at <http://localhost:8080>. In its **Packets** tab, enable **show protocol details**. The text filter shows only packets containing the text you enter. Searching for a record (such as `CR-102`) helps locate its `PUBLISH` packets, but hides acknowledgements and other control packets that have no record ID or topic. To inspect the whole exchange, **replace the record filter with the relevant Client ID** (or empty the filter entirely), then use the arrows (↑/↓), packet types and packet IDs to follow that connection. The viewer's **Clear list** button removes displayed rows; it does not clear the text filter.
 
 In Lab 1 you published test messages directly with `mosquitto_pub`. Here we want to follow the **same
 application record** through several MQTT experiments, so two small Python programs play the same MQTT
@@ -88,11 +88,11 @@ It should report that it connected and subscribed. In **workstation shell B**, p
 python cure_publish.py CR-101 --qos 0
 ```
 
-This second command publishes `CR-101` and exits. In shell A, check that the recorder prints a
-`RECEIVED record_id=CR-101` line. Then open the viewer and filter the packet list with `CR-101`.
-You should be able to locate the `PUBLISH` from `cure-source` to the broker and the second `PUBLISH`
-from the broker to `audit-q0`. These views — publisher output, recorder output, and the two `PUBLISH` packets in the trace — provide
-different evidence about how far the record travelled.
+This second command publishes `CR-101` and exits. In shell A, check for `RECEIVED record_id=CR-101`.
+In the viewer's **Packets** tab, type `CR-101` into the filter field. Locate the `↑ PUBLISH` from
+`cure-source` and the `↓ PUBLISH` to `audit-q0`; they carry the same `record_id`. Keep the recorder
+output in view as well: the trace and the application's terminal do not demonstrate exactly the
+same thing.
 
 ### Q1 — How far can you prove that CR-101 travelled?
 
@@ -114,11 +114,13 @@ In **shell B**, publish the next record:
 python cure_publish.py CR-102 --qos 1
 ```
 
-The publisher again exits by itself; keep `audit-q1` running. In the viewer, first locate the two
-`PUBLISH` packets carrying `CR-102`. Around each one, look for the MQTT control packet that completes
-that delivery. The viewer also displays a numeric packet identifier: use it to match a `PUBLISH` with
-its acknowledgement **on the same connection**. Do not try to match packet identifiers across the
-broker.
+The publisher exits by itself; keep `audit-q1` running and check that shell A prints `CR-102`.
+In the viewer, **replace the previous filter** with `CR-102` to find the two `PUBLISH` packets and
+their time. The acknowledgements are hidden by that filter because they contain no record ID.
+Instead, filter on **`cure-source`**: locate the `↑ PUBLISH` and its `↓ PUBACK`. Then filter on
+**`audit-q1`**: locate the `↓ PUBLISH` and its `↑ PUBACK`. Use the packet ID to pair packets
+**within each connection**; identical numbers on the two connections do not make them the same
+exchange.
 
 ### Q2 — Is QoS 1 one end-to-end exchange?
 
@@ -135,8 +137,10 @@ In **shell B**, publish while no quality application is connected:
 python cure_publish.py CR-103 --qos 1
 ```
 
-In the viewer, locate the `PUBLISH` of `CR-103` from `cure-source` and check whether the broker returns
-a `PUBACK` to the publisher. Now go back to **shell A** and start the same recorder again:
+In the viewer, search `CR-103` to locate the source `PUBLISH`, then switch the filter to
+**`cure-source`** and find the broker's `↓ PUBACK` on that connection near the same time.
+Leaving `CR-103` in the filter would hide the acknowledgement. Now go back to **shell A**
+and start the recorder again:
 
 ```bash
 python cure_recorder.py --client-id audit-q1 --qos 1
@@ -163,10 +167,11 @@ From **shell B**, publish one QoS-2 record:
 python cure_publish.py CR-104 --qos 2
 ```
 
-In the viewer, locate the two `PUBLISH` packets carrying `CR-104`. Inspect the packets immediately
-around the first delivery (`cure-source ↔ broker`) and write down the order and direction of
-`PUBLISH`, `PUBREC`, `PUBREL` and `PUBCOMP`. Repeat for the second delivery (`broker ↔ audit-q2`). Use
-the packet identifier only to follow packets belonging to one connection.
+In the viewer, filter on `CR-104` to find the two `PUBLISH` packets and their time. That search
+hides the control packets. Change the filter to **`cure-source`** and follow
+`PUBLISH → PUBREC → PUBREL → PUBCOMP` on the first connection. Then filter on **`audit-q2`** and
+reconstruct the same sequence on the second connection. Check directions and packet IDs **within
+each connection**.
 
 ### Q4 — What does QoS 2 add?
 
@@ -175,7 +180,10 @@ Use the trace to write the QoS-2 packet sequence on each side of the broker. Whi
 ### Let the two sides use different QoS levels
 
 Here each publisher command still sends one record and exits. We will change the maximum QoS requested
-by the subscriber while keeping the publication at QoS 2.
+by the subscriber while keeping the publication at QoS 2. In the viewer, filter by the **subscriber
+Client ID** for each run (for example, `audit-max0`). This keeps its `SUBSCRIBE`, `SUBACK` and
+`PUBLISH` visible together. Replace that filter when you start the next subscriber; a record-ID
+filter would hide the subscription exchange.
 
 **Run 1.** In shell A:
 
@@ -242,8 +250,9 @@ Q3 already showed why this is not the same as an end-to-end application guarante
 <details>
 <summary><strong>◆ Going deeper — D1: what did stronger delivery cost?</strong></summary>
 
-Use the clean Q1, Q2 and Q4 traces. On one already-connected MQTT link, count the MQTT packets and sum
-the viewer's `packet B` values from the first `PUBLISH` until that delivery completes.
+Use the clean Q1, Q2 and Q4 traces. In the viewer, **clear the text filter** so that `PUBACK`,
+`PUBREC`, `PUBREL` and `PUBCOMP` are not hidden. On one already-connected MQTT link, count the MQTT
+packets and sum the viewer's `packet B` values from the first `PUBLISH` until that delivery completes.
 
 Compare QoS 0, 1 and 2, and explain what extra protocol work appears as the QoS increases. Do not
 interpret small JSON-size differences as protocol overhead.
@@ -252,7 +261,8 @@ interpret small JSON-size differences as protocol overhead.
 <details>
 <summary><strong>◆ Going deeper — D2: packet identifier or business-record identifier?</strong></summary>
 
-Compare the MQTT packet identifiers with the JSON `record_id` for one QoS-1 or QoS-2 record.
+Locate a QoS-1 or QoS-2 `PUBLISH` by its JSON `record_id`, then **remove the text filter** to
+inspect the associated control packets. Compare the MQTT packet identifier with the JSON `record_id`.
 
 Explain which identifier names one in-flight MQTT exchange and which identifier still refers to the
 same business record after reconnect or retransmission.
@@ -271,8 +281,10 @@ In **shell A**, start a fresh persistent recorder and leave it running:
 python cure_recorder.py --client-id audit-persistent --qos 1 --persistent
 ```
 
-On this first connection, the recorder prints `session_present=False` and sends a `SUBSCRIBE`. In
-**shell B**, publish one normal record and check that shell A receives it:
+On this first connection, the recorder prints `session_present=False` and sends a `SUBSCRIBE`. If
+you inspect the connection in the viewer, **leave its filter empty** so that `CONNECT`, `CONNACK`,
+`SUBSCRIBE` and `SUBACK` remain visible. In **shell B**, publish one record and check that shell A
+receives it:
 
 ```bash
 python cure_publish.py CR-201 --qos 1
@@ -288,9 +300,11 @@ python cure_publish.py CR-204 --qos 1
 ```
 
 Return to **shell A** and run **exactly the same persistent-recorder command** again. Do not publish
-anything new. Watch the first lines printed by the recorder: note `session_present`, whether it sends
-a new `SUBSCRIBE`, and which `CR-20x` records arrive immediately. In the viewer, verify that
-`cure-source` does not publish those records a second time during the reconnection.
+anything new. In shell A, read `session_present`, check whether a `SUBSCRIBE` was sent, and note which
+`CR-20x` records arrive immediately. To verify their origin in the viewer, search a recovered ID such
+as `CR-202`: distinguish its **earlier** `↑ PUBLISH` from `cure-source` from the **later**
+`↓ PUBLISH` to `audit-persistent`. Clear that text filter again if you want to inspect the
+reconnection's `CONNACK` or subscription packets.
 
 ### Q6 — What did the broker keep while the application was away?
 
@@ -312,10 +326,11 @@ Back in **shell A**, connect a *different* persistent client:
 python cure_recorder.py --client-id audit-other --qos 1 --persistent
 ```
 
-Look at its first connection lines and wait briefly: note `session_present` and whether `CR-205` or
-`CR-206` arrive. Stop `audit-other` with `Ctrl+C`. Then, still in shell A, reconnect the original
-`audit-persistent` client with the exact command used in Q6. Again note `session_present` and which
-records arrive immediately.
+In shell A, check `session_present` and wait briefly for `CR-205` or `CR-206`; do not send any new
+records. Stop `audit-other` with `Ctrl+C`. Then reconnect `audit-persistent` with the exact command
+used in Q6. Compare the first lines and any immediately delivered records. The **recorder terminals**
+are the simplest place to judge whether a client recovered a session; a record-ID filter in the viewer
+would hide the connection packets.
 
 ### Q7 — How does the broker find the right stored session?
 
@@ -345,8 +360,9 @@ python cure_recorder.py --client-id audit-state --qos 1 --persistent \
   --topic 'quality/autoclave/AC-1/#'
 ```
 
-Because this is a new subscription, check that the recorder immediately receives `LAST-STATE` and
-notice its `retain=True` flag. Then stop `audit-state` with `Ctrl+C`. While it is absent, publish from
+Because this is a new subscription, shell A should immediately show `LAST-STATE` with `retain=True`.
+This is a flag printed by the **recorder**, not something you need to infer from a topic filter in
+the viewer. Then stop `audit-state` with `Ctrl+C`. While it is absent, publish from
 **shell B**:
 
 ```bash
@@ -360,9 +376,10 @@ python cure_recorder.py --client-id audit-new --qos 1 \
   --topic 'quality/autoclave/AC-1/#'
 ```
 
-Wait long enough to see what it receives, then stop it with `Ctrl+C`. Note separately whether you saw
-`LAST-STATE` and `CR-230`. Finally, in shell A, reconnect the original persistent `audit-state` client
-with its previous command. Do not publish anything new; again note which of those two values arrive.
+Watch shell A for `LAST-STATE` and `CR-230`, and note which actually arrive; then stop `audit-new`
+with `Ctrl+C`. Finally, reconnect the original persistent `audit-state` with its previous command.
+Do not publish anything new. Compare the **two client outputs**: the distinction is easier to see
+there than by filtering one record in the packet viewer.
 
 ### Q8 — Retained state or session state?
 
@@ -384,10 +401,10 @@ python cure_recorder.py --client-id audit-state --qos 1 \
   --topic 'quality/autoclave/AC-1/#'
 ```
 
-On connection, note `session_present`, whether the recorder receives `CR-231`, and whether it receives
-retained `LAST-STATE`. Stop this clean client with `Ctrl+C`, then run the original persistent
-`audit-state` command once more and observe its initial connection state. These observations are the
-basis of Q9.
+In shell A, read `session_present` and note whether `CR-231` or retained `LAST-STATE` appears.
+Stop the clean client with `Ctrl+C`, then run the original persistent `audit-state` command once
+more and read its initial connection state. Use the terminal outputs as the primary evidence here;
+if checking `CONNACK` in the viewer, first remove any record-ID filter.
 
 ### Q9 — What did the clean reconnect erase?
 
@@ -417,10 +434,12 @@ workstation shell — and restart only the broker:
 docker compose restart broker
 ```
 
-When the broker is running again, return to **workstation shell A** and reconnect `audit-restart` with
-its exact previous command. Note `session_present`, whether a new `SUBSCRIBE` is sent, and whether
-`CR-241` / `CR-242` are recovered. Finally, on the host, open `broker/mosquitto.conf` and identify the
-configuration line that accounts for what you observed.
+When the broker is running again, return to **workstation shell A** and reconnect `audit-restart`
+with its previous command. Use its terminal output to check `session_present`, whether it sends
+`SUBSCRIBE`, and whether `CR-241` / `CR-242` are recovered. The viewer still contains older packet
+rows from before the broker restart, so compare the **new connection**, not the mere presence of old
+records in the packet history. Finally, on the host, inspect `broker/mosquitto.conf` to find the
+setting behind the result.
 
 ### Q10 — Is a persistent MQTT session durable across a broker restart?
 
@@ -498,20 +517,23 @@ python fault.py drop-next --client audit-dup --direction up --type PUBACK
 `fault.py` configures the teaching relay; it is **not** another MQTT client. It asks the relay to drop
 exactly the next matching packet.
 
-Still in **shell B**, publish one record:
+Before publishing, set the viewer's text filter to **`audit-dup`** and keep **show protocol details**
+enabled. Filtering on `CR-250` would hide the acknowledgement, but filtering on the client ID will
+show both its `↓ PUBLISH` and `↑ PUBACK`.
+
+Now, in **shell B**, publish one record:
 
 ```bash
 python cure_publish.py CR-250 --qos 1
 ```
 
-Now watch **both shell A and the viewer**. First, shell A should print that it received `CR-250`. Then
-find the `PUBACK` sent by `audit-dup` in the viewer and wait until that row is marked `DROPPED`. As soon
-as you see both events, stop the recorder in shell A with `Ctrl+C`.
+Watch shell A for `RECEIVED record_id=CR-250` and the viewer for an `↑ PUBACK` from `audit-dup`
+marked **DROPPED**. As soon as both appear, stop the recorder in shell A with `Ctrl+C`.
 
-Restart the recorder in shell A with **exactly the same persistent command** and do not publish another
-record. Watch for `CR-250` again. In the viewer, compare the first and repeated broker-to-recorder
-`PUBLISH`: check their `record_id`, MQTT packet identifier and `DUP` flag. Finally, in shell B inspect
-what the application actually stored:
+Restart the recorder in shell A with **exactly the same persistent command**, without publishing
+anything new. Look for `CR-250` again in shell A. Keep the viewer filtered by `audit-dup` and
+compare the first and repeated `↓ PUBLISH` rows: inspect their `record_id`, packet identifier and
+`dup` flag in the **note** column. Then, in shell B, inspect what the application actually stored:
 
 ```bash
 python check_audit.py audit.jsonl
@@ -547,7 +569,9 @@ CoAP:  coap://ac1-edge/state
 ```
 
 The MQTT path publishes periodically. `coap_get.py` sends one CoAP GET request, prints the exchange
-and exits. You are not expected to know CoAP beforehand.
+and exits. You are not expected to know CoAP beforehand. **The browser viewer at `localhost:8080`
+shows MQTT traffic only**: for the CoAP experiments, use the `SEND` and `RECV` lines printed by
+`coap_get.py` (or the server logs in D6).
 
 ### Observe the periodic MQTT state
 
@@ -560,8 +584,9 @@ mosquitto_sub -h relay -p 1884 -i live-observer -q 1 \
 ```
 
 You should see JSON messages whose `seq` value changes over time. Note two or three sequence numbers,
-then stop the subscriber with `Ctrl+C`. Keep watching the viewer with a filter such as `ac1-live`: the
-MQTT publications continue even though your subscriber is no longer running.
+then stop the subscriber with `Ctrl+C`. In the viewer, switch to the **Packets** tab and filter on
+`ac1-live` (the publishing client): new `↑ PUBLISH` rows should continue to appear, even while the
+subscriber is stopped. This filter is useful for the MQTT stream, but does not show CoAP requests.
 
 From the workstation, request the current state twice through CoAP, leaving a few seconds between the
 two commands so that the state changes:
@@ -590,9 +615,9 @@ python coap_get.py --type con coap://ac1-edge/state
 python coap_get.py --type non coap://ac1-edge/state
 ```
 
-For each command, the client prints a `SEND` line followed by a `RECV` line. Compare the message type,
-`mid` and token between those two lines. Q13 asks what role each identifier plays; you do not need to
-inspect the Python implementation.
+For each command, read the `SEND` and `RECV` lines **in the workstation terminal**. Compare message
+type, `mid` and token within that pair. These are CoAP messages, so do not look for them in the MQTT
+viewer. Q13 asks you to interpret those fields; there is no need to inspect the Python code.
 
 ### Q13 — How are CoAP messages and responses matched?
 
@@ -607,8 +632,10 @@ only if that same request is transmitted again. First run a confirmable request:
 python coap_get.py --type con --timeout 1 coap://ac1-edge/state/drop-once
 ```
 
-Watch the client output until it receives a response. Count the `SEND attempt=...` lines and check whether
-`mid` and token change between attempts. Then run the same experiment with a non-confirmable request:
+Stay in the workstation terminal until the client receives a response. Count the
+`SEND attempt=...` lines and check whether `mid` and token change between attempts. The retransmissions
+are visible **here**, not in the MQTT viewer. Then run the same experiment with a non-confirmable
+request:
 
 ```bash
 python coap_get.py --type non --timeout 1 coap://ac1-edge/state/drop-once
@@ -647,11 +674,12 @@ python live_watch.py --client-id live-history --persistent
 
 `live_watch.py` prints one line for each MQTT live-state message. Note one or two `seq` values, then
 stop it with `Ctrl+C`. Wait long enough for several new states to be produced (the live state advances
-roughly every two seconds).
+roughly every two seconds). Here, the **MQTT watcher terminal** records what was delivered to this
+client; the browser viewer is not needed for the comparison.
 
-Restart `live_watch.py` in shell A with **exactly the same command**. Before doing anything else, note
-which sequence numbers are delivered immediately as the stored session resumes. Then, from **shell B**,
-request the current state once through CoAP:
+Restart `live_watch.py` in shell A with **exactly the same command**. Before doing anything else,
+note which `seq` values arrive immediately after reconnection in **shell A**. Then, from **shell B**,
+request the current state once through CoAP and read its returned `seq` in **shell B**:
 
 ```bash
 python coap_get.py coap://ac1-edge/state
@@ -666,8 +694,10 @@ Then choose one result from Q3, Q10 or Q11 to show why “acknowledged”, “ke
 <details>
 <summary><strong>◆ Going deeper — D7: compare application-protocol bytes for one current-state exchange</strong></summary>
 
-Use `coap_get.py` byte counts and the MQTT viewer's `packet B` field. Compare one already-connected
-QoS-1 MQTT delivery (`PUBLISH` + `PUBACK`) with one confirmable CoAP GET and its response.
+Use `coap_get.py` byte counts **from the terminal** and MQTT `packet B` values **from the viewer**.
+Clear the viewer's text filter before counting MQTT `PUBLISH` and `PUBACK`; the CoAP messages will
+not appear there. Compare one already-connected QoS-1 MQTT delivery with one confirmable CoAP GET
+and its response.
 
 State exactly which bytes you include, then explain why this protocol-byte count alone is insufficient
 to decide which path consumes less energy on a battery-powered device.

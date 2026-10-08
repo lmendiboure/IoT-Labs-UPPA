@@ -47,9 +47,9 @@
   <div class="controls">
     <label><input type="checkbox" id="hidePing" checked> hide PINGREQ/PINGRESP</label>
     <label><input type="checkbox" id="showDetails"> show protocol details</label>
-    <input type="text" id="filter" placeholder="filter: client, topic, type…">
+    <input type="text" id="filter" placeholder="filter: client, topic, type…" title="Text filters match individual packets. Record IDs and topics hide MQTT acknowledgements; empty this field to see them.">
     <button id="pause">Pause</button>
-    <button id="clear">Clear</button>
+    <button id="clear" title="Remove displayed packet rows (does not reset the text filter)">Clear list</button>
   </div>
 </header>
 <div class="tabs">
