@@ -1,40 +1,53 @@
 # IoT Labs — Adour Composites
 
-You are the new IoT engineers of **Adour Composites**, a plant in Tarnos that makes carbon-fibre parts
-for aircraft. Its machines and sensors already send data, each in its own way, and nobody uses them
-together. In three weeks an aerospace customer audits the plant; the electricity bill went up by a
-third; and the plant manager wants *"one system, not nine"*.
+You are part of the engineering team at **Adour Composites**, a fictional carbon-fibre manufacturing site in Tarnos. Across the labs, you return to the same factory, its equipment and its quality-control needs. Each session starts with a new problem in a system you already know.
 
-Over ten labs, you build that system, one question at a time.
+## The four investigations
 
-| Lab | The plant's question | What you learn |
+| Lab | The problem to solve | What you will investigate |
 |---|---|---|
-| [1](lab1/) | **How do our data travel today, and can we trust them?** | MQTT publish/subscribe; tracing data end to end; first normalization decisions; client liveness |
-| [2](lab2/) | **Can we lose a cure record if the network fails?** | MQTT QoS, acknowledgements and persistent sessions; first CoAP request/response and retransmission |
-| 3 | Can we read the machines directly? | Modbus, OPC UA |
-| 4 | How do we reach a sensor inside a freezer? | LoRaWAN: range, airtime, energy |
-| 5 | How do sensors last years on a battery? | CoAP for constrained devices, Observe, LwM2M, energy budget |
-| 6 | How do all our devices speak one language? | units, time, identity, data models |
-| 7 | What must be decided on site, without waiting for the cloud? | edge processing, alarms |
-| 8 | Where does our energy go? | time series, dashboards, KPIs |
-| 9 | Who can read and write our data? | TLS, authentication, access control |
-| 10 | Is our architecture right? | you defend it |
+| [Lab 1 — Understand the installation](lab1/) | How do equipment data reach applications, and what can we actually observe? | MQTT publish/subscribe, topics, payloads, gateways, LoRaWAN uplink, client liveness |
+| [Lab 2 — Investigate network failures](lab2/) | Can an autoclave cure record be lost, delayed or delivered twice? | MQTT QoS, acknowledgements, sessions, reconnection and a first comparison with CoAP |
+| [Lab 3 — Secure the existing system](lab3/) | Can an unauthorized client fabricate a cure record, and can we secure MQTT without interrupting production data? | Message injection, identity, ACL configuration, TLS migration, application checks |
+| Lab 4 — Design the architecture (forthcoming) | How should we design the complete IoT system given what we have learned? | Justified choices for devices, gateways, edge/cloud, reliability, security and data handling |
 
-Each lab contains a core path and optional extensions for groups that progress faster. The simulated plant runs on a virtual machine and reproduces the kinds of events needed throughout the course: shifts, cure cycles, door openings, changing measurements and device failures.
+**The connection between sessions matters.** Lab 1 establishes the data path; Lab 2 tests what the communication layer guarantees under failure; Lab 3 asks who is allowed to supply those data and whether the quality application can trust them. The last lab brings these observations together into an architecture.
 
-## Start
+Each lab runs a **separate, reproducible Docker simulation**. The site, equipment names, MQTT topics and business scenarios are reused where relevant, but a broker session or a record saved in one lab is not automatically transferred to the next. References to earlier incidents are there to help you compare what you observed.
 
-Clone the repository once, then enter the directory of the session you are working on:
+## Preparation and working environment
+
+Use the UPPA teaching VM or a local machine with Docker Compose. See [Working environment](docs/setup.md) for initial setup, proxy settings, SSH access, port forwarding and troubleshooting.
+
+Clone the repository only once. Before a new lab, update your existing copy:
 
 ```bash
-git clone <this repository's URL> ~/IoT-Labs-UPPA      # once
-cd ~/iot-labs/lab1                                  # or lab2
-docker compose up -d --build
+cd ~/iot-labs
+git pull
 ```
 
-For later sessions, update the repository with `git pull` and enter the corresponding lab directory.
-The available lab pages are [Lab 1](lab1/) and [Lab 2](lab2/). [Working environment](docs/setup.md) explains the UPPA VM or local setup, Docker, and access to the viewer.
+Stop the previous lab from **its own directory** (`docker compose down`) before starting the next one; the labs reuse some host ports. For example, to start Lab 3 after Lab 2:
 
-*For the link between the labs and the lectures, see [the course map](docs/course.md). Adour
-Composites, its people and its data are fictional; the protocols, standards and orders of magnitude
-are real.*
+```bash
+cd ~/iot-labs/lab2
+docker compose down
+cd ../lab3
+docker compose up -d --build
+docker compose ps
+```
+
+Follow the **Preparation** section in the README of the lab you are doing. Unless the instructions say otherwise, the student commands run inside its `workstation` container:
+
+```bash
+docker compose exec workstation bash
+```
+
+The MQTT viewer is available at `http://localhost:8080` (forward this port when using the VM). Lab 3 also has a quality console at `http://localhost:8081`; its README explains when to start it and how to forward the second port. The viewer and the quality console show **different evidence**: packets seen on the observation path versus data handled by the application.
+
+## How to work through a lab
+
+Read the scenario, follow the experiments in order and use your observations to support answers to the numbered questions. Commands, traces and application output are evidence, not explanations on their own. Some exercises require modifying configurations or Python files and then showing that the resulting service still works. Optional **Going deeper** sections are not prerequisites.
+
+You may keep the reasoning and evidence in a format that suits your group; no universal answer template is imposed. If useful, maintain the [optional architecture decision log](record/site-architecture.md) to carry your findings into Lab 4.
+
+**Safety note:** the deliberately insecure services, sample accounts and training certificates are intended only for the isolated teaching environment. Do not reuse them for a real installation or test the exercises against systems outside the lab.
