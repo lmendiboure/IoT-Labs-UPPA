@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adour Composites · AC-1 Quality Console</title>
+<style>
+:root{color-scheme:light;--ink:#142334;--muted:#64748b;--bg:#f4f7fa;--line:#dbe3ed;--blue:#195ba2;--red:#ad302e;--green:#167348}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:#172c46;color:white;padding:20px max(18px,calc((100vw - 1040px)/2))}header h1{font-size:24px;margin:0 0 4px}header p{color:#cbdaea;margin:0;font-size:13px}
+main{max-width:1040px;margin:24px auto;padding:0 18px}.banner{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px}
+small,.muted{color:var(--muted)}.pill{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.02em;border-radius:999px;padding:5px 10px;background:#e8eef7;color:#395d83}
+.pill.on{color:var(--green);background:#dbf2e4}.pill.off{color:var(--red);background:#fce9e7}.layout{display:grid;grid-template-columns:1fr 1fr;gap:14px}.panel{background:white;border:1px solid var(--line);border-radius:13px;padding:20px;min-height:180px;box-shadow:0 3px 14px #152b3910}
+.panel h2{font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:#54708e;margin:0 0 14px}.reading{font-size:38px;letter-spacing:-.03em;font-weight:730;margin:0 0 7px}.reading span{font-size:17px;font-weight:500;color:#65768c}.desc{font-size:14px;color:#526173}.stats{display:flex;gap:22px;margin-top:15px;color:#445368;font-size:13px}.stat strong{color:#142334}
+.feed{margin-top:15px}.tablewrap{overflow:auto}.log{width:100%;border-collapse:collapse;font-size:13px}.log td,.log th{padding:9px;border-bottom:1px solid #e8edf2;text-align:left;vertical-align:top}.log th{font-size:11px;color:#728297;text-transform:uppercase;letter-spacing:.06em}.log td:first-child{white-space:nowrap;color:#617086}.log td:last-child{min-width:330px}.warn{color:var(--red);font-weight:650}.fine{font-size:12px;color:#586b81;margin:15px 0 30px}
+@media(max-width:700px){.layout{grid-template-columns:1fr}.reading{font-size:32px}}
+</style></head>
+<body><header><h1>Adour Composites <span style="color:#9bc8ff">/</span> AC-1</h1><p>Quality console · training installation · observed MQTT messages, not trusted physical telemetry</p></header>
+<main><div class="banner"><div><strong>Live quality application</strong> <span class="muted">· messages received on this MQTT client</span></div><div><span id="connection" class="pill off">DISCONNECTED</span> <span id="filter" class="pill">NO VALIDATION</span></div></div>
+<div class="layout">
+<section class="panel"><h2>Autoclave temperature</h2><div class="reading" id="temp">— <span>°C</span></div><div class="desc" id="tempmeta">Waiting for a measurement</div><div class="stats"><span class="stat">Received: <strong id="n-temp">0</strong></span><span class="stat">Rejected: <strong id="n-reject">0</strong></span></div></section>
+<section class="panel"><h2>Latest cure record</h2><div class="reading" id="record">—</div><div class="desc" id="recordmeta">Waiting for a cure record</div><div class="stats"><span class="stat">Records received: <strong id="n-cure">0</strong></span><span class="pill" id="recordtrust">NOT VALIDATED</span></div></section>
+</div>
+<section class="panel feed"><h2>What reached the quality application?</h2><div class="tablewrap"><table class="log"><thead><tr><th>Time</th><th>Type</th><th>Application status</th><th>Observation</th></tr></thead><tbody id="events"><tr><td colspan="4">No events yet</td></tr></tbody></table></div></section>
+<p class="fine">An entry marked DISPLAYED or UNVERIFIED was received by this application. It does not establish that a physical sensor created it. MQTT packet acknowledgments and ACL refusals are evidenced separately in the viewer or client logs. After the TLS migration, this console remains the application observation point.</p>
+</main>
+<script>
+function put(id,s){document.getElementById(id).textContent=s}
+function render(s){let conn=document.getElementById('connection');conn.textContent=s.connected?'MQTT CONNECTED':'MQTT DISCONNECTED';conn.className='pill '+(s.connected?'on':'off');put('filter',s.validate?'TEMPERATURE FILTER ON':'NO VALIDATION');
+let t=s.last_temperature;if(t){put('temp',`${t.value===null?'—':t.value} °C`);put('tempmeta',`Claimed source: ${t.source_claim??'unknown'} · seq ${t.seq??'unknown'} · ${t.verdict} (${t.reason})`)}
+let c=s.last_cure;if(c){put('record',`${c.record_id??'unknown'} · ${c.result??'unknown'}`);put('recordmeta',`Batch: ${c.batch??'unknown'} · claimed source: ${c.source_claim??'unknown'}`)}
+put('n-temp',s.counts.temperature);put('n-reject',s.counts.rejected);put('n-cure',s.counts.cure_records);
+let tbody=document.getElementById('events');tbody.replaceChildren();for(let e of s.events){let tr=document.createElement('tr');for(let txt of [e.at,e.kind,e.verdict,e.summary]){let td=document.createElement('td');td.textContent=txt;if(e.verdict==='REJECTED')td.className='warn';tr.appendChild(td)}tbody.appendChild(tr)}
+}
+async function update(){try{let r=await fetch('/api/status',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);render(await r.json())}catch(e){document.getElementById('connection').textContent='CONSOLE UNAVAILABLE';document.getElementById('connection').className='pill off'}}
+setInterval(update,1100);update();
+</script></body></html>

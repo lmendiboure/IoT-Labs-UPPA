@@ -16,7 +16,7 @@ between are there to build the evidence you need; you do not need to report ever
 
 ## Preparation
 
-From `lab2/` on the **host**, start the stack and enter the workstation container:
+If the Lab 1 stack is still running, stop it first from the host in `lab1/` with `docker compose down`: both labs use host port `8080` for their viewer. Then, from `lab2/` on the **host**, start the stack and enter the workstation container:
 
 ```bash
 docker compose up -d --build
@@ -228,7 +228,7 @@ python cure_recorder.py --client-id audit-pub1 --qos 2
 python cure_publish.py CR-108 --qos 1
 ```
 
-Again note the subscription QoS and the outgoing `PUBLISH` QoS. The four runs give the evidence for Q5.
+Again note the subscription QoS and the outgoing `PUBLISH` QoS. The four runs give the evidence for Q5. Stop `audit-pub1` with `Ctrl+C` in shell A before continuing.
 
 ### Q5 — How does the broker choose the outgoing QoS?
 
@@ -412,7 +412,7 @@ After the clean reconnect, what happened to the previous session state? Use your
 
 ### Restart the broker itself
 
-So far only clients have disappeared. We now restart the broker itself. In **shell A**, create a fresh
+Stop the `audit-state` recorder left running after Q9 with `Ctrl+C` in shell A. So far only clients have disappeared. We now restart the broker itself. In **shell A**, create a fresh
 persistent session and leave it running:
 
 ```bash
@@ -500,7 +500,7 @@ implementation limit rather than an MQTT delivery guarantee?
 The next failure is different: the application will receive a record, but the broker will not learn
 that the delivery completed.
 
-In **shell A**, remove any old log, then start a fresh persistent recorder and leave it running:
+Stop `audit-restart` in shell A if it is still running after Q10. Then remove any old log and start a fresh persistent recorder in **shell A**:
 
 ```bash
 rm -f audit.jsonl
@@ -558,6 +558,8 @@ recorder. Verify both sides of the result: the viewer should still show the MQTT
 the JSONL log should contain only one stored business record. What application state would have to be
 durable if this protection must survive an application crash?
 </details>
+
+Before moving to CoAP, stop `audit-dup` in shell A if it is still running.
 
 ## Part 3 — What changes when the application asks for the current state?
 

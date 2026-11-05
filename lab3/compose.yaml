@@ -1,0 +1,48 @@
+name: lab3
+
+x-tools-build: &tools-build
+  context: ./tools
+  args:
+    HTTP_PROXY: ${HTTP_PROXY:-${http_proxy:-}}
+    HTTPS_PROXY: ${HTTPS_PROXY:-${https_proxy:-}}
+    NO_PROXY: ${NO_PROXY:-${no_proxy:-}}
+
+services:
+  broker:
+    image: eclipse-mosquitto:2.0
+    entrypoint: ["/bin/sh", "/mosquitto/config/start.sh"]
+    volumes:
+      - ./broker:/mosquitto/config:ro
+    restart: unless-stopped
+
+  relay:
+    build: *tools-build
+    image: lab3-tools:1
+    command: python relay.py
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on: [broker]
+    restart: unless-stopped
+
+  sensor:
+    build: *tools-build
+    image: lab3-tools:1
+    command: python sensor.py
+    env_file:
+      - ./sensor/sensor.env
+    volumes:
+      - ./broker/tls/ca.crt:/lab/ca.crt:ro
+    depends_on: [relay]
+    restart: unless-stopped
+
+  workstation:
+    ports:
+      - "127.0.0.1:8081:8081"
+    build: *tools-build
+    image: lab3-tools:1
+    command: sleep infinity
+    working_dir: /work
+    volumes:
+      - ./work:/work
+    depends_on: [relay]
+    restart: unless-stopped

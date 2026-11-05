@@ -1,0 +1,20 @@
+# Lab 3 — student access policy (Q7).
+# Derive the read and write permissions from the four business roles in README.md.
+# Use the topic hierarchy given in the lab, not blanket readwrite access.
+# Each authenticated username has only the privileges granted below it.
+# Syntax examples:  user <account>  /  topic read <filter>  /  topic write <filter>
+# Deny all unmatched operations. Keep at least one permitted operation per
+# legitimate role, and verify both denied and allowed behavior in Q8–Q9.
+
+user ac1
+# TODO: production permissions derived from the engineering requirements
+
+user quality
+# TODO: consumer permissions derived from the engineering requirements
+
+user visitor
+# The visitor account is intentionally restricted to public information.
+topic read public/#
+
+user maintenance
+# TODO: maintenance read/write permissions (think about wildcard scope)
