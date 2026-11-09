@@ -16,6 +16,7 @@ import paho.mqtt.client as mqtt
 
 TOPIC = 'plant/autoclave/AC-1/temperature'
 CURE_TOPIC = 'quality/autoclave/AC-1/cure-records'
+PUBLIC_TOPIC = 'public/site/status'
 TRANSPORT = os.getenv('MQTT_TRANSPORT', 'plaintext').strip().lower()
 HOST = os.getenv('MQTT_HOST', 'relay').strip()
 PORT = int(os.getenv('MQTT_PORT', '1884'))
@@ -102,6 +103,11 @@ def main():
                 }
                 client.publish(CURE_TOPIC, json.dumps(record, separators=(',', ':')), qos=1)
                 print(f'AC-1 published completed cure record {rid} via {TRANSPORT}', flush=True)
+                # One minimal, non-sensitive public event so learners can test that
+                # permitted public subscriptions receive actual data, not only SUBACK.
+                public_status = {'site': 'Adour Composites', 'line': 'AC-1',
+                                 'status': 'RUNNING'}
+                client.publish(PUBLIC_TOPIC, json.dumps(public_status, separators=(',', ':')), qos=1)
             time.sleep(3)
     finally:
         client.disconnect()

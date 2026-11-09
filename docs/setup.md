@@ -15,8 +15,8 @@ The proxy variables are normally already available in the VM environment. If `gi
 Clone the repository once, then enter the directory of the session you are working on:
 
 ```bash
-git clone <this repository's URL> ~/IoT-Labs-UPPA
-cd ~/iot-labs/lab1        # or lab2 for the second session, or labx for the xth 
+git clone <this repository's URL> ~/iot-labs
+cd ~/iot-labs/lab1        # replace lab1 with lab2 or lab3 for later sessions
 ```
 
 ### Open the viewer from your own computer
@@ -29,15 +29,25 @@ ssh -L 8080:127.0.0.1:8080 <login>@<your-vm>
 
 Then open <http://localhost:8080> in the browser on your own computer.
 
-If you use **VS Code Remote – SSH**, connect to the VM, open the repository, and forward port `8080` from the *Ports* tab instead.
+**Lab 3 only:** its separate quality application exposes a small console on port `8081`. You may
+forward both ports with:
+
+```bash
+ssh -L 8080:127.0.0.1:8080 -L 8081:127.0.0.1:8081 <login>@<your-vm>
+```
+
+The quality console opens at <http://localhost:8081> **after you start**
+`python quality_monitor.py` inside `lab3/workstation`. The MQTT viewer remains on port `8080`.
+
+If you use **VS Code Remote – SSH**, connect to the VM, open the repository, and forward port `8080` from the *Ports* tab instead (and `8081` for Lab 3 quality console).
 
 ## If you run the labs locally
 
 You need Git, Docker, and Docker Compose. Clone the repository and enter the directory of the session you are working on:
 
 ```bash
-git clone <this repository's URL> ~/IoT-Labs-UPPA
-cd ~/iot-labs/lab1        # or lab2 for the second session
+git clone <this repository's URL> ~/iot-labs
+cd ~/iot-labs/lab1        # replace lab1 with lab2 or lab3 for later sessions
 ```
 
 No SSH tunnel is needed. Once the lab is running, open <http://localhost:8080> directly.
