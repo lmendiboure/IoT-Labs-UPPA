@@ -9,7 +9,7 @@ small{color:#5c6b7e}.stack{display:grid;grid-template-columns:repeat(auto-fit,mi
 .card{background:white;border:1px solid #dce3ed;border-radius:12px;padding:18px;box-shadow:0 2px 7px #10172908}
 .metric{font-size:27px;font-weight:700;margin-top:7px;font-variant-numeric:tabular-nums}.label{font-size:13px;color:#5b6678}
 input{padding:10px 12px;font-size:15px;border:1px solid #b8c7d8;border-radius:8px;width:180px}
-pre{white-space:pre-wrap;word-break:break-word;line-height:1.5;margin:0;font-size:13px}
+pre{white-space:pre-wrap;word-break:break-word;line-height:1.5;margin:0;font-size:13px;max-height:340px;overflow:auto}
 .pill{padding:6px 11px;background:#e2eaf7;border-radius:999px;font-size:12px;font-weight:600}
 footer{margin-top:25px;color:#566174;font-size:13px}
 </style></head><body>
@@ -23,7 +23,7 @@ footer{margin-top:25px;color:#566174;font-size:13px}
 <div class="card"><div class="label">Alerts observed</div><div class="metric" id="alerts">—</div></div>
 <div class="card"><div class="label">MQTT application-payload bytes received</div><div class="metric" id="bytes">—</div></div>
 </section>
-<section class="stack"><div class="card"><strong>Last readings</strong><pre id="readings">Run a scenario to begin.</pre></div>
+<section class="stack"><div class="card"><strong>Readings in this run</strong><pre id="readings">Run a scenario to begin.</pre></div>
 <div class="card"><strong>Summary windows</strong><pre id="windows">—</pre></div>
 <div class="card"><strong>Alert events</strong><pre id="alertlist">—</pre></div></section>
 <footer>The counters describe MQTT application publications and payload bytes at this service, not Ethernet/TCP/TLS wire bytes. Only messages delivered to this consumer are counted.</footer>
@@ -35,7 +35,7 @@ function line(id,value){document.getElementById(id).textContent=value;}
 async function refresh(){try{const run=input.value.trim();const resp=await fetch('/api/state'+(run?'?run='+encodeURIComponent(run):''),{cache:'no-store'});if(!resp.ok)throw new Error('HTTP '+resp.status);
 const d=await resp.json();line('connection','Connected');const a=d.data||{};
 for(const [id,key] of Object.entries(fields))line(id,(a[key]??0).toLocaleString());
-line('readings',JSON.stringify((a.readings||[]).slice(-8),null,2));
+line('readings',(a.readings||[]).slice(-40).map(r=>'seq '+String(r.seq).padStart(2,'0')+'  |  '+r.temperature+' °C').join('\n')||'—');
 line('windows',JSON.stringify((a.windows||[]).slice(-6),null,2));
 line('alertlist',JSON.stringify((a.alerts||[]).slice(-6),null,2));
 }catch(e){line('connection','Not connected');}}

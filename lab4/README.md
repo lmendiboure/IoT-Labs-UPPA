@@ -158,9 +158,9 @@ the cloud. Are all 20 measurements visible at the cloud application?
 
 ### Find the two high-temperature events
 
-Look at the **Cloud analytics** dashboard for `RAW-1`. The alert list identifies the
-sequence number that triggered the decision. To see every input value, inspect the
-`PUBACK` lines in workstation A or the cloud's latest readings.
+In the **Cloud analytics** dashboard, select `RAW-1`. Use **Readings in this run**
+to inspect the temperatures and **Alert events** to find the alert sequence number.
+You can also check each value against the `PUBACK` lines in workstation A.
 
 ### Q2 — Why did one event trigger an alert but not the other?
 
@@ -175,9 +175,10 @@ MQTT headers, TCP/IP framing, retransmissions or encryption overhead.
 
 ### Q3 — What does cloud processing require from the network?
 
-Record the two cloud counters for `RAW-1`: publications and payload bytes.
-What information is sent across the site-to-cloud link so that the cloud can apply
-its detection rule? Keep these numbers to compare with Part 3.
+Record the cloud's publication count and payload bytes for `RAW-1`.
+The cloud raised an alert at `seq=9`. If it received **only** the temperature at
+`seq=9`, could it apply the three-consecutive-readings rule? Name the preceding
+readings it needs. Keep the traffic counters for Part 3.
 
 ---
 
@@ -189,26 +190,33 @@ five samples, but it cannot produce the required alert until you complete its fu
 
 ### Complete the local detector
 
-1. Open `work/detect_student.py` in your editor **on the VM host**. It contains the
-   function `step(temperature, consecutive)`.
-2. Return the updated counter and a Boolean indicating whether an alert must be emitted.
-   Trigger **one** alert on the third consecutive temperature strictly above 190 °C.
-   A fourth consecutive high sample must not trigger another alert. A normal sample resets
-   the counter.
-3. In **workstation A**, run the offline tests:
+1. In **workstation A**, run the initial tests **before changing the code**:
 
    ```bash
    python test_edge.py
    ```
 
-   The starter intentionally fails some tests. Continue when you obtain `RESULT 7/7`.
-4. On the **VM host**, restart only the edge service to load the edited Python file:
+   The incomplete starter fails some tests. Keep the output for Q4.
+2. On the **VM host**, open `work/detect_student.py`. Complete its function
+   `step(temperature, consecutive)`.
+   Return the updated counter and a Boolean indicating whether to raise an alert.
+   Raise **one** alert on the third consecutive reading strictly above 190 °C.
+   Do not raise another on the fourth high reading. Reset the counter after a
+   normal reading.
+3. In **workstation A**, run the tests again:
+
+   ```bash
+   python test_edge.py
+   ```
+
+   Continue when you obtain `RESULT 7/7`.
+4. On the **VM host**, restart the edge service so it loads your edited file:
 
    ```bash
    docker compose restart edge
    ```
 
-5. In **workstation A**, confirm that the edge subscription is active again:
+5. In **workstation A**, check that its MQTT subscription is ready:
 
    ```bash
    python check_services.py
@@ -216,9 +224,9 @@ five samples, but it cannot produce the required alert until you complete its fu
 
 ### Q4 — What does the function need to remember?
 
-Use two failed tests from the original starter. For each, identify the input
-`temperature`, the previous counter and the expected output. Why is the previous
-counter necessary to decide whether to send an alert?
+Choose **two failed cases from your first `test_edge.py` run**. For each,
+record the temperature, the previous counter and the expected result.
+Why does the detection rule need to remember the counter between readings?
 
 ### Test the detector on live MQTT data
 
@@ -245,10 +253,10 @@ subsequent high sample? Explain one consequence for an alarm dashboard.
 
 ### Q7 — Is the edge detecting an actual MQTT stream?
 
-Compare the local `raw samples` count from `report.py` with the 20
-`PUBACK` messages from the simulator. Which program performs the detection,
-and which MQTT broker delivers the input to it? Identify both using the architecture
-above and one observed output.
+Take one `PUBACK` line from the simulator and the edge `raw samples` count
+from the `MATCH-1` report. **What does the `PUBACK` prove, and what does the
+edge count prove that the `PUBACK` alone does not?** Name the broker that
+acknowledged the simulator's publication.
 
 <details><summary><strong>◆ Going deeper A — Is a simple threshold enough?</strong></summary>
 
