@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__ · Adour Composites</title>
+<style>
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#182335;background:#eff3f8}
+body{margin:0 auto;max-width:1080px;padding:26px 20px}header{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+h1{margin:.2em 0;font-size:26px}.eyebrow{letter-spacing:.13em;font-size:12px;color:#57657c;font-weight:700;text-transform:uppercase}
+small{color:#5c6b7e}.stack{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:20px 0}
+.card{background:white;border:1px solid #dce3ed;border-radius:12px;padding:18px;box-shadow:0 2px 7px #10172908}
+.metric{font-size:27px;font-weight:700;margin-top:7px;font-variant-numeric:tabular-nums}.label{font-size:13px;color:#5b6678}
+input{padding:10px 12px;font-size:15px;border:1px solid #b8c7d8;border-radius:8px;width:180px}
+pre{white-space:pre-wrap;word-break:break-word;line-height:1.5;margin:0;font-size:13px}
+.pill{padding:6px 11px;background:#e2eaf7;border-radius:999px;font-size:12px;font-weight:600}
+footer{margin-top:25px;color:#566174;font-size:13px}
+</style></head><body>
+<header><div><div class="eyebrow">Adour Composites · IoT Lab 4</div><h1>__TITLE__</h1>
+<small>Live data from the MQTT processing service. This is not a physical sensor or a real WAN.</small></div>
+<div><label class="label" for="run">Run ID</label><div><input id="run" placeholder="Latest run"><span id="connection" class="pill">Connecting</span></div></div></header>
+<section class="stack">
+<div class="card"><div class="label">MQTT publications received</div><div class="metric" id="messages">—</div></div>
+<div class="card"><div class="label">Raw measurements received</div><div class="metric" id="raw">—</div></div>
+<div class="card"><div class="label">Summary windows received/produced</div><div class="metric" id="summaries">—</div></div>
+<div class="card"><div class="label">Alerts observed</div><div class="metric" id="alerts">—</div></div>
+<div class="card"><div class="label">MQTT application-payload bytes received</div><div class="metric" id="bytes">—</div></div>
+</section>
+<section class="stack"><div class="card"><strong>Last readings</strong><pre id="readings">Run a scenario to begin.</pre></div>
+<div class="card"><strong>Summary windows</strong><pre id="windows">—</pre></div>
+<div class="card"><strong>Alert events</strong><pre id="alertlist">—</pre></div></section>
+<footer>The counters describe MQTT application publications and payload bytes at this service, not Ethernet/TCP/TLS wire bytes. Only messages delivered to this consumer are counted.</footer>
+<script>
+const fields={messages:'messages',raw:'raw_count',summaries:'summary_count',alerts:'alert_count',bytes:'payload_bytes'};
+const qs=new URLSearchParams(location.search);const input=document.getElementById('run');input.value=qs.get('run')||'';
+input.addEventListener('change',()=>{const v=input.value.trim();const url=v?('?run='+encodeURIComponent(v)):'./';history.replaceState({},'',url);refresh();});
+function line(id,value){document.getElementById(id).textContent=value;}
+async function refresh(){try{const run=input.value.trim();const resp=await fetch('/api/state'+(run?'?run='+encodeURIComponent(run):''),{cache:'no-store'});if(!resp.ok)throw new Error('HTTP '+resp.status);
+const d=await resp.json();line('connection','Connected');const a=d.data||{};
+for(const [id,key] of Object.entries(fields))line(id,(a[key]??0).toLocaleString());
+line('readings',JSON.stringify((a.readings||[]).slice(-8),null,2));
+line('windows',JSON.stringify((a.windows||[]).slice(-6),null,2));
+line('alertlist',JSON.stringify((a.alerts||[]).slice(-6),null,2));
+}catch(e){line('connection','Not connected');}}
+refresh();setInterval(refresh,1000);
+</script></body></html>
