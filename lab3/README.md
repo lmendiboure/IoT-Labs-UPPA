@@ -117,19 +117,23 @@ In your browser:
 
 1. Wait for a cure record beginning with `CR-SIM-`.
 2. Copy its exact `record_id` from the quality console.
-3. Find the same ID in a `PUBLISH` event in the MQTT viewer.
+3. Filter the MQTT viewer using that ID. Find the `PUBLISH` events
+   and check their direction arrows (↑ and ↓) and client names.
 4. Inspect the JSON payload and the console event for that ID.
 
 ### Q1 — What does a normal record tell us?
 
-For **the same `CR-SIM-...` record**, write down:
+For **the same `CR-SIM-...` record**, find these two MQTT packets:
 
-- The MQTT topic and the direction of one `PUBLISH` in the viewer.
-- The result displayed in the quality console.
-- The value of `device_id` in the JSON payload.
+- The `PUBLISH` going **up** (client → broker): note the client and topic.
+- The `PUBLISH` going **down** (broker → client): note the client and topic.
 
-**Question:** do these observations prove that a real autoclave completed a cure cycle?
-Explain in one sentence.
+Also record the quality console's verdict and the JSON `device_id`.
+
+**Question:** if you had observed only the **up** packet, could you conclude
+that the quality application received the record? Which **additional observation**
+in this experiment shows that the application actually received it?
+Answer in two short sentences.
 
 ### Step 2 — Publish a fictitious record
 
@@ -287,8 +291,10 @@ Complete these three observations for the `visitor` publication:
 | Cure-record publication (`PUBACK`) | |
 | `CR-302` in the quality console | |
 
-**Question:** what additional permission should the broker check before allowing
-`visitor` to publish a cure record?
+**Compare Q5 and Q6:** the anonymous client was refused, but `visitor` could
+publish `CR-302`. Which operation did authentication stop in Q5? Which operation
+was still allowed in Q6? Name the **exact cure-record topic** on which `visitor`
+should not have write permission. Answer in two short sentences.
 
 ### Step 7 — Create the access-control policy
 
@@ -414,9 +420,14 @@ Report these **four results**:
 3. Was the `maintenance/status` publication accepted?
 4. Did `verify_service.py` report `PASS` for **both** AC-1 data streams?
 
-Copy the new `CR-SIM-...` identifier printed by the service check.
-Could the ACL be considered correct if all forbidden operations failed
-but this production check failed? Explain in one sentence.
+For the fourth test, write only `PASS` or `FAIL`. You already recorded
+sample messages in Q4. If the result is `FAIL`, identify which stream is missing.
+
+**Troubleshooting case:** suppose the `visitor` and `maintenance` tests pass,
+but `verify_service.py` reports `FAIL`: it receives temperatures but **no cure
+record**. Which **two ACL permissions** would you check first? For each, name
+the account, the action (`read` or `write`) and the exact cure-record topic.
+Use your rules from Q7.
 
 If the service check fails, inspect these logs **on the VM host**:
 
@@ -586,11 +597,11 @@ Copy:
 
 1. The three modified lines in `sensor/sensor.env`.
 2. The `AC-1 CONNECTED ...` line from the sensor logs.
-3. The final `PASS` or `FAIL` from `verify_service.py --tls`.
-4. The new cure-record ID reported by the check.
+3. `PASS` or `FAIL` from `verify_service.py --tls`. Do not copy all
+   the received messages again.
 
-Which result confirms that the background producer switched to TLS?
-Which result confirms that the quality application still receives both streams?
+**Question:** which result proves that the **background producer** uses TLS?
+Which result shows that the **quality application** still receives both streams?
 
 If the test fails, inspect `docker compose logs --tail=40 sensor broker`
 **on the VM host**. Resolve the connection or publication problem before Step 14.
@@ -743,17 +754,31 @@ Check whether the rejected `999` replaced the latest accepted temperature.
 2. Why does the temperature filter **not** establish that the cure cycle
    claimed by `CR-399` actually happened?
 
-<details><summary><strong>◆ Going deeper D — Detect a replayed cure record</strong></summary>
+<details><summary><strong>◆ Going deeper D — Can two cure records contradict each other?</strong></summary>
 
-In Q15, the application checked temperatures but did not check repeated
-cure-record IDs. Test that limitation using real MQTT publications.
+In Lab 2, you investigated **duplicate delivery**. Here the question is
+whether two business records with the **same ID** can claim different results.
+Keep the TLS-only broker, your ACL and the quality monitor from Q15 running.
 
-**D1 — Send the same record twice**
+### D1 — Observe an identical record twice
 
-Keep `quality_monitor.py --tls --validate` running in workstation A.
-In workstation B, open `replay_cr399.json` and inspect its `record_id`.
+On the **VM host**, from `lab3/`, open a **third workstation terminal**:
 
-Run the following command **twice** in workstation B:
+```bash
+docker compose exec workstation bash
+```
+
+In that terminal, start a separate audit subscriber:
+
+```bash
+python record_audit.py --tls
+```
+
+Wait for `READY`. This tool compares the contents of cure records with the
+same `record_id`. It does not change the main quality application.
+
+In **workstation B**, inspect `replay_cr399.json`. Then run this command
+**twice**:
 
 ```bash
 mosquitto_pub -h broker -p 8883 --cafile /work/ca.crt \
@@ -761,66 +786,47 @@ mosquitto_pub -h broker -p 8883 --cafile /work/ca.crt \
   -t 'quality/autoclave/AC-1/cure-records' -f replay_cr399.json
 ```
 
-Search for `CR-399` in the quality console. Find the **two new events**.
-Also find a `PUBACK` for each publication in your terminal output.
+In the audit terminal, find the two lines for `CR-399`. Record their labels.
+Check that both commands received a `PUBACK`. The quality console should also
+show two receptions of this record.
 
-Does receiving the same JSON twice prove that two cure cycles took place?
+### D2 — Submit a contradictory result
 
-**D2 — Implement a duplicate-ID check**
+The file `conflict_cr399.json` contains **the same `record_id`** and cure data,
+but a different `result`. Compare it with `replay_cr399.json`.
 
-Open a **third workstation terminal** from `lab3/` on the VM host:
-
-```bash
-docker compose exec workstation bash
-```
-
-In this third terminal, run:
+In **workstation B**, publish the conflicting file:
 
 ```bash
-python test_replay_guard.py
+mosquitto_pub -h broker -p 8883 --cafile /work/ca.crt \
+  -u ac1 -P ac1-demo -V mqttv5 -q 1 -d \
+  -t 'quality/autoclave/AC-1/cure-records' -f conflict_cr399.json
 ```
 
-Open `replay_guard_logic.py` and complete `first_occurrence(record_id, seen_ids)`:
+Read the new audit line. Find the corresponding `CR-399` event in the quality
+console. Does either application independently know which claimed result is true?
 
-- On the first occurrence of an ID, add it to `seen_ids` and return `True`.
-- On later occurrences of the same ID, return `False`.
+### D3 — Invent a new record ID
 
-Run the tests again until they report **4/4**. Then start the audit subscriber
-in the third terminal:
-
-```bash
-python replay_guard.py --tls
-```
-
-Wait for `READY`. In workstation B, publish the same `replay_cr399.json`
-file **twice again** using the command from D1.
-
-Write down the two audit lines for `CR-399`.
-Which component recognizes the repeated business ID: the quality console
-or your new audit subscriber?
-
-**D3 — Restart and try a new ID**
-
-1. Stop the audit subscriber with `Ctrl+C`.
-2. Restart it with `python replay_guard.py --tls`.
-3. Wait for `READY`.
-4. Publish `replay_cr399.json` **once more** using the D1 command.
-5. Record what the audit subscriber reports.
-
-Finally, in workstation B, publish a new fictitious record:
+In **workstation B**, run:
 
 ```bash
 python attack.py --user ac1 --tls --record-id CR-400 --result PASS
 ```
 
-Record the subscriber's result for `CR-400`.
+Read the audit line for `CR-400`. The test publisher used valid `ac1`
+credentials, but it did not operate a physical autoclave.
 
-**Explain briefly:** why did restarting the audit program change its result
-for `CR-399`? What would need to be stored to detect duplicates after a restart?
-Why does accepting a **new** ID not prove that a physical cure cycle occurred?
+**Answer these three short questions:**
 
-The audit program is separate from `quality_monitor.py`.
-Do not change the main quality application for this optional extension.
+1. What distinguishes the second publication in D1 from the publication in D2?
+2. Which discrepancy can the audit detect? Does that establish whether the
+   actual cure result was `PASS` or `FAIL`?
+3. Why does the audit accept `CR-400` as a new ID even though no real cycle
+   was observed? What additional evidence would a production quality system need?
+
+The audit keeps its first-seen records **in memory only**. It is an investigation
+tool, not a durable quality database or proof of physical provenance.
 
 </details>
 
