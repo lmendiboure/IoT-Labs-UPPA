@@ -10,6 +10,9 @@ x-app-build: &app-build
 services:
   broker:
     image: eclipse-mosquitto:2.0
+    # Broker bootstrap needs root for credential generation; mosquitto
+    # drops to its own account before accepting MQTT connections.
+    user: "0:0"
     entrypoint: ["/bin/sh", "/lab/start.sh"]
     volumes:
       - ./broker:/lab:ro

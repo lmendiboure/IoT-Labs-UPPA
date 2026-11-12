@@ -45,7 +45,13 @@ def main():
             if ready:break
         except Exception:pass
         time.sleep(1)
-    else:raise SystemExit('FAIL: missing NEW legitimate temperature/cure record on IT or OT (inspect broker/sensor/quality/gateway logs)')
+    else:
+        now_ot = snap.get('counters', {}) if isinstance(snap, dict) else {}
+        now_it = g.get('counters', {}) if isinstance(g, dict) else {}
+        raise SystemExit('FAIL: missing NEW legitimate temperature/cure record. '
+                         f'OT baseline={initial[0]}, current={now_ot}; '
+                         f'IT baseline={initial[1]}, current={now_it}. '
+                         'Inspect broker/sensor/quality/gateway logs.')
     assert a['mode']==args.expect,(a,args.expect)
     st,config=request(args.it_url+'/api/config')
     expected=200 if args.expect=='vulnerable' else 403

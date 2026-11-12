@@ -109,7 +109,9 @@ Changes in `app/*.py` require a rebuild/recreate of the affected container, for 
 docker compose up -d --build --no-deps --force-recreate gateway
 ```
 
-Changes to MQTT ACL files require `docker compose restart broker`. The infrastructure health checks are in `scripts/`; supporting Python programs
+Changes to MQTT ACL files require `docker compose restart broker`. The broker
+recreates its private password database and ACL copy at every start, so profile
+switches and container restarts are repeatable. The infrastructure health checks are in `scripts/`; supporting Python programs
 are in `diagnostics/`. For example, `diagnostics/smoke.py` waits for fresh traffic,
 so an old displayed event cannot be mistaken for current service availability.
 To inspect the broker directly, use:
@@ -155,3 +157,18 @@ docker compose ps broker
 ```
 
 If the broker still restarts, use its actual error log to diagnose the cause.
+
+### If the broker reports `Permission denied` for `/tmp/lab-users`
+
+Older versions of this teaching stack could leave a password file that could
+not be overwritten during a `docker compose restart`. This version removes and
+recreates transient credentials on **every** broker start. To replace a
+previously broken running container with the corrected configuration:
+
+```bash
+docker compose up -d --no-deps --force-recreate broker
+docker compose restart sensor gateway quality
+./scripts/doctor.sh
+```
+
+An `acceptance.sh` PASS is required before distributing the testbed.
