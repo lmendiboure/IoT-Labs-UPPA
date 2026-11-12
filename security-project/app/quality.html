@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Adour Composites | OT Quality</title><style>body{font-family:system-ui;margin:2rem auto;max-width:950px;padding:1rem;background:#f5f8fc;color:#203043}
+header{background:#155e52;color:white;padding:1rem;border-radius:12px}section{background:white;border:1px solid #dae1e9;border-radius:12px;margin:1rem 0;padding:1rem}
+pre{background:#e9edf2;padding:1rem;white-space:pre-wrap;max-height:500px;overflow:auto}</style></head><body>
+<header><h1>OT Quality — AC-1</h1><p>Records received by a real MQTT subscriber; not physical proof of a cure cycle.</p></header>
+<section><p>Temperature messages: <strong id="temps">0</strong> | Cure records: <strong id="records">0</strong></p>
+<label>Find a record: <input id="filter" placeholder="CR-AUDIT / CR-SIM"/></label><pre id="events"></pre></section>
+<script>async function refresh(){try{const r=await fetch('/api/status');const s=await r.json();
+document.getElementById('temps').textContent=s.counters.temperature;document.getElementById('records').textContent=s.counters.cure_records;
+const f=document.getElementById('filter').value.trim();const out=s.events.filter(x=>!f||JSON.stringify(x).includes(f));
+document.getElementById('events').textContent=JSON.stringify(out.slice(0,70),null,2)}catch(e){document.getElementById('events').textContent=String(e)}}
+document.getElementById('filter').addEventListener('input',refresh);refresh();setInterval(refresh,2500);</script></body></html>

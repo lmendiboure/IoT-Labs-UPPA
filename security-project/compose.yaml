@@ -1,0 +1,83 @@
+name: iot-cyber
+
+x-app-build: &app-build
+  context: ./app
+  args:
+    HTTP_PROXY: ${HTTP_PROXY:-${http_proxy:-}}
+    HTTPS_PROXY: ${HTTPS_PROXY:-${https_proxy:-}}
+    NO_PROXY: ${NO_PROXY:-${no_proxy:-}}
+
+services:
+  broker:
+    image: eclipse-mosquitto:2.0
+    entrypoint: ["/bin/sh", "/lab/start.sh"]
+    volumes:
+      - ./broker:/lab:ro
+    networks: [ot]
+    restart: unless-stopped
+
+  sensor:
+    build: *app-build
+    image: iot-cyber-app:1
+    command: ["python", "sensor.py"]
+    environment:
+      MQTT_HOST: broker
+      SENSOR_PERIOD: ${SENSOR_PERIOD:-2}
+      SENSOR_SITE_TAG: ${SENSOR_SITE_TAG:-TARNOS}
+    networks: [ot]
+    depends_on: [broker]
+    restart: unless-stopped
+
+  quality:
+    build: *app-build
+    image: iot-cyber-app:1
+    command: ["python", "quality.py"]
+    environment:
+      MQTT_HOST: broker
+    ports:
+      - "${LAB_BIND_IP:-127.0.0.1}:8091:8091"
+    networks: [ot, observation]
+    depends_on: [broker]
+    restart: unless-stopped
+
+  gateway:
+    build: *app-build
+    image: iot-cyber-app:1
+    command: ["python", "gateway.py"]
+    environment:
+      MQTT_HOST: broker
+    volumes:
+      - ./control:/control:ro
+    ports:
+      - "${LAB_BIND_IP:-127.0.0.1}:8090:8090"
+    networks: [it, ot]
+    depends_on: [broker]
+    restart: unless-stopped
+
+  workstation:
+    build: *app-build
+    image: iot-cyber-app:1
+    command: ["sleep", "infinity"]
+    working_dir: /diagnostics
+    volumes:
+      - ./diagnostics:/diagnostics
+    networks: [ot]
+    depends_on: [gateway, quality]
+    restart: unless-stopped
+
+  capture:
+    profiles: ["capture"]
+    image: nicolaka/netshoot:v0.14
+    network_mode: "service:gateway"
+    cap_add: [NET_RAW, NET_ADMIN]
+    volumes:
+      - ./captures:/captures
+    command: ["tcpdump", "-i", "any", "-U", "-s", "0", "-w", "/captures/mqtt.pcap", "tcp", "port", "1883"]
+    depends_on: [gateway]
+    restart: "no"
+
+networks:
+  it:
+  observation:
+  ot:
+    internal: true

@@ -15,6 +15,11 @@ You are part of the engineering team at **Adour Composites**, a fictional carbon
 
 Each lab runs a **separate, reproducible Docker simulation**. The site, equipment names, MQTT topics and business scenarios are reused where relevant, but a broker session or a record saved in one lab is not automatically transferred to the next. References to earlier incidents are there to help you compare what you observed.
 
+
+## IT/OT security testbed — after the four labs
+
+A separate [IT/OT security testbed](security-project/) is provided for subsequent projects. It includes an IT web gateway, an OT MQTT broker, a simulated AC-1 producer, a quality dashboard, isolated Docker networks and packet-capture support. It starts as a working service with no student code to complete, independently of Labs 1–4, on **8090** (IT) and **8091** (quality). The [testbed README](security-project/README.md) explains the architecture, setup and technical checks. 
+
 ## Preparation and working environment
 
 Use the UPPA teaching VM or a local machine with Docker Compose. See [Working environment](docs/setup.md) for initial setup, proxy settings, SSH access, port forwarding and troubleshooting.

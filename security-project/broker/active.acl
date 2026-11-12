@@ -1,0 +1,17 @@
+user sensor
+topic write plant/autoclave/AC-1/temperature
+topic write quality/autoclave/AC-1/cure-records
+
+user quality
+topic read plant/autoclave/AC-1/temperature
+topic read quality/autoclave/AC-1/cure-records
+
+# IT gateway permissions.
+user gateway
+topic read plant/autoclave/AC-1/temperature
+topic read quality/autoclave/AC-1/cure-records
+topic write quality/autoclave/AC-1/cure-records
+
+user auditor
+topic read plant/autoclave/AC-1/temperature
+topic read quality/autoclave/AC-1/cure-records

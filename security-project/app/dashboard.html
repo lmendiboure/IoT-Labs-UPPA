@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Adour Composites | IT Maintenance</title><style>
+body{font-family:system-ui,Arial,sans-serif;margin:2.5rem auto;max-width:1050px;padding:0 1rem;color:#203043;background:#f5f8fc}
+header{background:#16324f;color:white;padding:1.2rem 1.5rem;border-radius:12px} .grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+section{background:white;padding:1.2rem;border-radius:12px;border:1px solid #d5e0e9;margin-top:1rem} code{background:#e9edf2;padding:.15rem}
+input,select,button{padding:.55rem;margin:.3rem}button{background:#155e75;color:white;border:0;border-radius:6px;cursor:pointer}
+pre{white-space:pre-wrap;word-break:break-all;background:#e9edf2;padding:1rem;max-height:250px;overflow:auto}
+small{color:#546878} @media(max-width:680px){.grid{grid-template-columns:1fr}}
+</style></head><body><header><h1>IT Maintenance — AC-1</h1><p>Teaching environment. No physical controls.</p></header>
+<div class="grid"><section><h2>Gateway</h2><p>Mode: <strong id="mode">…</strong></p><p>Measurements observed: <strong id="temps">0</strong></p><p>Cure records observed: <strong id="records">0</strong></p><p><a href="/openapi.json">API specification</a></p></section>
+<section><h2>Diagnostic tool</h2><p>This application can request a synthetic test record. Its privileges are part of the security audit.</p>
+<label>Record ID <input id="rid" value="CR-AUDIT-101" maxlength="48"></label>
+<label>Result <select id="result"><option>PASS</option><option>FAIL</option></select></label>
+<button id="send">Submit test</button><pre id="response">No request yet.</pre></section></div>
+<section><h2>Latest gateway MQTT events</h2><p><small>Application receipts, not a packet trace. Open the OT quality board separately on port 8091.</small></p>
+<pre id="events"></pre></section>
+<script>
+async function refresh(){try{const [h,r]=await Promise.all([fetch('/api/health'),fetch('/api/status')]);let mode=await h.json(), s=await r.json();
+document.getElementById('mode').textContent=mode.mode;
+document.getElementById('temps').textContent=s.counters.temperature;
+document.getElementById('records').textContent=s.counters.cure_records;
+document.getElementById('events').textContent=JSON.stringify(s.events.slice(0,16),null,2);
+}catch(e){document.getElementById('events').textContent=String(e)}}
+document.getElementById('send').onclick=async()=>{let body={record_id:document.getElementById('rid').value,result:document.getElementById('result').value};
+try{let r=await fetch('/api/maintenance/test-record',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+document.getElementById('response').textContent=r.status+' '+await r.text()}catch(e){document.getElementById('response').textContent=String(e)};refresh()};
+refresh();setInterval(refresh,2500);
+</script></body></html>
