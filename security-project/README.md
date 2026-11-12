@@ -134,3 +134,24 @@ docker compose up -d --build             # Start again
 - The IT/OT link is an *application-level* HTTP-to-MQTT path. No PLC, Modbus endpoint, safety controller or physical actuator is present. Do not presume an XSS, RCE or command-injection vulnerability without testing.
 - Specialized audit tools, AI services and assessment procedures are selected **outside this repository** by the teaching team.
 - All experiments must remain on isolated, explicitly authorized systems.
+
+
+### Broker in a restart loop (exit code 13)
+
+If `docker compose ps broker` shows `Restarting (13)`, inspect:
+
+```bash
+docker compose logs --tail=60 broker
+```
+
+An inaccessible password file can cause this problem. The bundled
+`broker/start.sh` assigns `/tmp/lab-users` to the `mosquitto` user
+before starting the service. Use this corrected script and run:
+
+```bash
+docker compose restart broker
+docker compose ps broker
+./scripts/doctor.sh
+```
+
+If the broker still restarts, use its actual error log to diagnose the cause.
